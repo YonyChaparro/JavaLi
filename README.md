@@ -1,12 +1,3 @@
-## 👥 Detrás de JavaLí🐗
-
-| Nombre           | GitHub   |
-| ---------------- | -------- |
-| Deivid Farid Ardila Herrera | faridardila |
-| Cristofer Damián Camilo Ordoñez Osa | CristoferOrdonez|
-| Yony Sebastian Chaparro Mesa | YonyChaparro |
-| Angel David Beltrán García | anbeld |
-
 ## 💻 Proyecto Final – ¡PosYa!
 
 El sistema **¡PosYa!** es una solución integral de **Punto de Venta (POS)** diseñada estratégicamente para ser la columna vertebral digital de los **pequeños comercios en Colombia**. Nace de una profunda comprensión de la pasión y el esfuerzo que impulsa cada tienda de barrio, ferretería, restaurante, librería o cafetería.
@@ -25,6 +16,19 @@ Nuestra misión es clara: **democratizar la eficiencia y la modernidad**. Rompem
 * **Gestión de Clientes:** CRUD completo para la base de datos de clientes, facilitando la facturación electrónica.
 * **Diseño Adaptable:** Preparado para gestionar productos y servicios de diversos tipos de negocios (tiendas de barrio, ferreterías, restaurantes, etc.).
 * **Interfaz de Escritorio Intuitiva:** Todas las funciones administrativas accesibles desde una aplicación de escritorio.
+
+
+## 👥 Detrás de JavaLí🐗
+
+EL grupo nace gracias al curso de Ingeniería de Software I.
+
+| Nombre           | GitHub   |
+| ---------------- | -------- |
+| Deivid Farid Ardila Herrera | faridardila |
+| Cristofer Damián Camilo Ordoñez Osa | CristoferOrdonez|
+| Yony Sebastian Chaparro Mesa | YonyChaparro |
+| Angel David Beltrán García | anbeld |
+
 
 ## 🛠️ Tecnologías Utilizadas
 
