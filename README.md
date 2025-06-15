@@ -1,3 +1,5 @@
+![image](https://github.com/user-attachments/assets/1a4feb29-6c8f-45fb-9ce1-0db4f6e7a96e)
+
 ## 💻 Proyecto Final – ¡PosYa!
 
 El sistema **¡PosYa!** es una solución integral de **Punto de Venta (POS)** diseñada estratégicamente para ser la columna vertebral digital de los **pequeños comercios en Colombia**. Nace de una profunda comprensión de la pasión y el esfuerzo que impulsa cada tienda de barrio, ferretería, restaurante, librería o cafetería.
