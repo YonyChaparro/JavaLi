@@ -14,7 +14,7 @@ Nuestra misión es clara: **democratizar la eficiencia y la modernidad**. Rompem
 
 * **Gestión Integral de Ventas:** Registro rápido y eficiente de transacciones.
 * **Control de Inventario Inteligente:** Actualización automática de stock en cada venta, con gestión de productos.
-* **Facturación Dual:** Generación de facturas ordinarias y electrónicas; estas últimas con la integración de la API Factus y la DIAN.
+* **Facturación Dual:** Generación de facturas ordinarias y electrónicas; la segunda con la integración de la API Factus y la DIAN.
 * **Informes Financieros Robustos:** Visualización de ventas, utilidad, IVA y gastos, con filtros avanzados por producto y rangos de tiempo.
 * **Historial Detallado de Ventas:** Acceso rápido y filtrado a todas las transacciones pasadas.
 * **Gestión de Clientes:** CRUD completo para la base de datos de clientes, facilitando la facturación electrónica.
