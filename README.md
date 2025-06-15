@@ -28,10 +28,10 @@ EL grupo nace gracias al curso de Ingeniería de Software I.
 
 | Nombre           | GitHub   | Correo                  |
 | ---------------- | -------- |-------------------------|
-| Deivid Farid Ardila Herrera | faridardila | deardilah@unal.edu.co |
-| Cristofer Damián Camilo Ordoñez Osa | cristoferOrdonez| crordonezo@unal.edu.co |
-| Yony Sebastian Chaparro Mesa | YonyChaparro | ychaparro@unal.edu.co |
-| Angel David Beltrán García | anbeld | anbeltrang@unal.edu.co |
+| Deivid Farid Ardila Herrera | @faridardila | deardilah@unal.edu.co |
+| Cristofer Damián Camilo Ordoñez Osa | @cristoferOrdonez| crordonezo@unal.edu.co |
+| Yony Sebastian Chaparro Mesa | @YonyChaparro | ychaparro@unal.edu.co |
+| Angel David Beltrán García | @anbeld | anbeltrang@unal.edu.co |
 
 
 ## 🛠️ Tecnologías Utilizadas
