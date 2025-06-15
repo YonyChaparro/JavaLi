@@ -1,4 +1,6 @@
-![image](https://github.com/user-attachments/assets/1a4feb29-6c8f-45fb-9ce1-0db4f6e7a96e)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/1a4feb29-6c8f-45fb-9ce1-0db4f6e7a96e"/>
+</p>
 
 ## 💻 Proyecto Final – ¡PosYa!
 
