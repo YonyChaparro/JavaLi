@@ -4,7 +4,7 @@ El sistema **¡PosYa!** es una solución integral de **Punto de Venta (POS)** di
 
 Nuestra misión es clara: **democratizar la eficiencia y la modernidad**. Rompemos con la rigidez de sistemas pensados para un solo nicho, diseñado para que los comercios que requieren herramientas sencillas y eficientes puedan sustituir el uso de papel y los procesos manuales, y pasar a un registro completamente automatizado de ventas y movimientos de inventario; además, garantiza el cumplimiento de las normativas establecidas por la DIAN para la emisión de facturas electrónicas.
 
-**De esta forma, liberamos al emprendedor del trabajo monótono y fatigoso, para redirigir su enfoque en lo que verdaderamente importa: innovar, crear valor y forjar conexiones auténticas con sus clientes, sintiéndose tranquilos al tener un sistema que los respalda y los apoya.**
+**De esta forma, liberamos al emprendedor del trabajo monótono y fatigante, para redirigir su enfoque en lo que verdaderamente importa: innovar, crear valor y forjar conexiones auténticas con sus clientes, sintiéndose tranquilos al tener un sistema que los respalda y los apoya.**
 
 ## ✨ Características Principales
 
