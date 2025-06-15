@@ -4,11 +4,6 @@
   <img src="https://github.com/user-attachments/assets/2d2f0a47-5299-43ff-bd03-f62ab9fab6da" height="120" width="120"/>
 </p>
 
-<p align="right">
-  <img src="https://github.com/user-attachments/assets/2d2f0a47-5299-43ff-bd03-f62ab9fab6da" height="150" width="150"/>
-</p>
-
-
 
 ## 💻 Proyecto Final – PosYa!
 
