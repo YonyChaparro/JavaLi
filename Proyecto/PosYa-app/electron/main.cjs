@@ -4,15 +4,14 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 768,
-    minWidth: 1024,
-    minHeight: 614,
+    resizable: false,            // ❌ No se puede redimensionar
+    maximizable: false,          // ❌ No se puede maximizar
+    fullscreenable: false,       // ❌ No se puede poner en pantalla completa
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   });
-
-  win.setAspectRatio(5 / 3);
 
   win.loadURL('http://localhost:5173'); // O la ruta a tu index.html
 }
