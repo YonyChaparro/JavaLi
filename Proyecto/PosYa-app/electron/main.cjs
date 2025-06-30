@@ -3,10 +3,10 @@ const { app, BrowserWindow } = require('electron');
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
-    height: 768,
-    resizable: false,            // ❌ No se puede redimensionar
-    maximizable: false,          // ❌ No se puede maximizar
-    fullscreenable: false,       // ❌ No se puede poner en pantalla completa
+    height: 1280,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
