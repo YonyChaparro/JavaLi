@@ -1,4 +1,9 @@
 export default function HomeMenu() {
+
+    const abrirReporte = () => {
+        window.open('/reportes.html', '_blank');
+    };
+
     return (
         <div className="w-screen h-screen bg-[#06327d] p-6">
             <div className="w-full h-full grid grid-cols-4 grid-rows-2 gap-[24px] text-black">
@@ -40,20 +45,26 @@ export default function HomeMenu() {
                     { label: 'Clientes', icon: '/icons/clientes.png' },
                     { label: 'Inventario', icon: '/icons/inventario.png' },
                     { label: 'Factura ordinaria', icon: '/icons/factura-ordinaria.png' },
-                    { label: 'Reportes', icon: '/icons/reportes.png' },
+                    { label: 'Reportes', icon: '/icons/reportes.png', onClick: abrirReporte},
                     { label: 'Vendedor', icon: '/icons/vendedor.webp' },
-                    { label: 'Pendiente', icon: '/icons/pendiente.webp' },
-                ].map((item, i) => (
-                    <div key={i} className="bg-white rounded-[36px] flex flex-col items-center justify-between p-4 relative transition-transform duration-300 hover:scale-105">
-                        <div className="absolute top-3 right-3 h-6 w-6 bg-blue-100 rounded-full p-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" viewBox="0.5 0.5 31.0 31.0" style={{ fill: 'rgb(6, 50, 125)' }}>
-                                <path d="M16,0.5C7.45001,0.5,0.5,7.45001,0.5,16S7.45001,31.5,16,31.5S31.5,24.54999,31.5,16S24.54999,0.5,16,0.5z M24.71002,17.5 H17.5v7.20996c0,0.82001-0.66998,1.5-1.5,1.5s-1.5-0.67999-1.5-1.5V17.5H7.28998c-0.82001,0-1.5-0.67004-1.5-1.5 c0-0.83002,0.67999-1.5,1.5-1.5H14.5V7.28998c0-0.82001,0.66998-1.5,1.5-1.5s1.5,0.67999,1.5,1.5V14.5h7.21002 c0.82001,0,1.5,0.66998,1.5,1.5C26.21002,16.82996,25.53003,17.5,24.71002,17.5z" />
-                            </svg>
+                    { label: 'Pendiente', icon: '/icons/pendiente.webp'},
+                ].map((item, i) => {
+
+                    return (
+                    
+                        <div key={i} onClick={item.onClick} className="bg-white rounded-[36px] flex flex-col items-center justify-between p-4 relative transition-transform duration-300 hover:scale-105">
+                            <div className="absolute top-3 right-3 h-6 w-6 bg-blue-100 rounded-full p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" viewBox="0.5 0.5 31.0 31.0" style={{ fill: 'rgb(6, 50, 125)' }}>
+                                    <path d="M16,0.5C7.45001,0.5,0.5,7.45001,0.5,16S7.45001,31.5,16,31.5S31.5,24.54999,31.5,16S24.54999,0.5,16,0.5z M24.71002,17.5 H17.5v7.20996c0,0.82001-0.66998,1.5-1.5,1.5s-1.5-0.67999-1.5-1.5V17.5H7.28998c-0.82001,0-1.5-0.67004-1.5-1.5 c0-0.83002,0.67999-1.5,1.5-1.5H14.5V7.28998c0-0.82001,0.66998-1.5,1.5-1.5s1.5,0.67999,1.5,1.5V14.5h7.21002 c0.82001,0,1.5,0.66998,1.5,1.5C26.21002,16.82996,25.53003,17.5,24.71002,17.5z" />
+                                </svg>
+                            </div>
+                            <img src={item.icon} alt={item.label} className="h-44 object-contain" />
+                            <p className="mt-2 text-lg font-semibold text-center">{item.label}</p>
                         </div>
-                        <img src={item.icon} alt={item.label} className="h-44 object-contain" />
-                        <p className="mt-2 text-lg font-semibold text-center">{item.label}</p>
-                    </div>
-                ))}
+
+                    );
+
+                })}
 
             </div>
         </div>

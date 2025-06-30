@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte General</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+  <div class="reporte-container">
+    <h2>REPORTE GENERAL</h2>
+
+    <div class="filtros">
+      <div class="filtro-group">
+        <strong>El informe muestra por producto:</strong><br>
+        <label><input type="checkbox" id="filtroIngresos" checked> Ingresos</label>
+        <label><input type="checkbox" id="filtroCostos" checked> Costos</label>
+        <label><input type="checkbox" id="filtroUtilidades" checked> Utilidades</label>
+        <label><input type="checkbox" id="filtroIVA" checked> IVA</label>
+      </div>
+
+      <div class="filtro-group">
+        <label><input type="checkbox" id="filtroProducto"> Filtro por producto</label>
+        <select id="productoSelect" disabled>
+          <option value="">-- Selecciona --</option>
+        </select>
+      </div>
+
+      <div class="filtro-group">
+        <label><input type="checkbox" id="filtroPeriodo"> Filtro por periodo</label>
+        <input type="date" id="fechaInicio" disabled>
+        <input type="date" id="fechaFin" disabled>
+      </div>
+
+      <button id="btnGenerar" class="btn-generar">Generar</button>
+    </div>
+
+    <div id="reporte" class="oculto"></div>
+  </div>
+
+  <script src="reportes.js"></script>
+</body>
+</html>

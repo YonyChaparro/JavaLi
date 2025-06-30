@@ -1,0 +1,125 @@
+// servidor.cjs
+const express = require('express');
+const cors = require('cors');
+const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+
+// Conexión a la base de datos SQLite
+const db = new sqlite3.Database('./base_de_datos.db', (err) => {
+  if (err) {
+    console.error('Error al conectar a la base de datos:', err.message);
+  } else {
+    console.log('Conectado a la base de datos SQLite.');
+  }
+});
+
+// Ejecutar script SQL para crear las tablas
+const sqlPath = path.join(__dirname, 'base_de_datos.sql');
+const sqlScript = fs.readFileSync(sqlPath, 'utf8');
+db.exec(sqlScript, (err) => {
+  if (err) {
+    console.error('Error al crear las tablas desde base_de_datos.sql:', err.message);
+  } else {
+    console.log('Tablas creadas correctamente desde base_de_datos.sql');
+  }
+});
+
+// Endpoint: generar reporte
+app.get('/api/reportes', (req, res) => {
+  const { producto, fechaInicio, fechaFin } = req.query;
+  let query = `
+    SELECT
+      dpv.det_nombre_producto AS producto,
+      SUM(dpv.det_monto) AS ingresos,
+      SUM(dpv.det_cantidad * dpv.det_costo_unitario) AS costos,
+      SUM(dpv.det_monto - (dpv.det_cantidad * dpv.det_costo_unitario)) AS utilidades,
+      SUM(dpv.det_IVA_unitario) AS iva
+    FROM DETALLE_PRODUCTO_VENDIDO dpv
+    WHERE 1=1`;
+
+  const params = [];
+
+  if (producto) {
+    query += ' AND dpv.det_nombre_producto = ?';
+    params.push(producto);
+  }
+
+  if (fechaInicio && fechaFin) {
+    query += ' AND v.ven_fecha BETWEEN ? AND ?';
+    params.push(fechaInicio, fechaFin);
+  }
+
+  query += ' GROUP BY dpv.det_nombre_producto';
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.json(rows);
+    }
+  });
+});
+
+// Endpoint: insertar datos de prueba
+app.get('/api/insertar-datos-prueba', (req, res) => {
+  // Insertar productos
+  const productos = [
+    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", "IVA1"],
+    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", "IVA2"]
+  ];
+  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, tip_codigo_iva) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  productos.forEach(p => stmtProd.run(p));
+  stmtProd.finalize();
+
+  // Insertar IVA
+  const ivas = [
+    ["IVA1", "IVA General", 0.16],
+    ["IVA2", "IVA Reducido", 0.08]
+  ];
+  const stmtIva = db.prepare('INSERT OR IGNORE INTO TIPO_IVA (tip_codigo, tip_nombre, tip_porcentaje) VALUES (?, ?, ?)');
+  ivas.forEach(i => stmtIva.run(i));
+  stmtIva.finalize();
+
+  // Insertar venta
+  const ventas = [
+    ["V001", "2025-06-20", "10:00", 181644040, 184550344, "C001", "CC", "Juan", "Pérez", null, "Calle 1", "555-1234", "Bogotá", "juan@mail.com", "Pedro S.A.", "V001", "Calle 2", "555-5678", "Bogotá", "Responsable"]
+  ];
+  const stmtVenta = db.prepare('INSERT OR IGNORE INTO VENTA (ven_codigo, ven_fecha, ven_hora, ven_subtotal, ven_total, ven_identificacion_cliente, ven_tipo_identificacion_cliente, ven_nombre_cliente, ven_apellido_cliente, ven_razon_social_cliente, ven_direccion_cliente, ven_numero_telefonico_cliente, ven_ciudad_cliente, ven_correo_electronico_cliente, ven_nombre_o_razon_social_vendedor, ven_NIT_vendedor, ven_direccion_vendedor, ven_numero_de_contacto_vendedor, ven_municipio_vendedor, ven_responsabilidad_fiscal_vendedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  ventas.forEach(v => stmtVenta.run(v));
+  stmtVenta.finalize();
+
+  // Insertar detalle
+  const detalles = [
+    [1, "Muñeca inflable", 2, 90822020, 892399, 2906304, 181644040, 184550344, "V001"]
+  ];
+  const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_numero, det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  detalles.forEach(d => stmtDet.run(d));
+  stmtDet.finalize();
+
+  res.json({ ok: true });
+});
+
+// Endpoint para obtener productos vendidos
+app.get('/api/productos-vendidos', (req, res) => {
+  const query = `
+    SELECT DISTINCT dpv.det_nombre_producto AS nombre
+    FROM DETALLE_PRODUCTO_VENDIDO dpv
+    ORDER BY nombre;
+  `;
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor backend escuchando en http://localhost:${PORT}`);
+});
