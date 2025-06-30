@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function FormInventario() {
     const [formData, setFormData] = useState({
@@ -117,7 +117,7 @@ export default function FormInventario() {
                         value={formData.descripcion}
                         onChange={handleChange}
                         className="w-full border p-2 rounded"
-                        rows="3"
+                        rows={3}
                     />
                 </div>
 
