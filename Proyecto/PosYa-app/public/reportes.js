@@ -1,5 +1,3 @@
-
-
 const filtros = {
   ingresos: document.getElementById("filtroIngresos"),
   costos: document.getElementById("filtroCostos"),
@@ -84,6 +82,40 @@ btnGenerar.addEventListener("click", async () => {
   html += `</table>`;
   reporteDiv.innerHTML = html;
   reporteDiv.classList.remove("oculto");
+
+  // Crear o mostrar el botón de PDF
+  let btnPDF = document.getElementById("btnPDF");
+  if (!btnPDF) {
+    btnPDF = document.createElement("button");
+    btnPDF.id = "btnPDF";
+    btnPDF.textContent = "Descargar PDF";
+    btnPDF.style.margin = "10px";
+    reporteDiv.parentNode.insertBefore(btnPDF, reporteDiv.nextSibling);
+  }
+  btnPDF.classList.remove("oculto");
+
+  btnPDF.onclick = () => {
+    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+      alert("jsPDF no está cargado. Asegúrate de incluir jsPDF en tu HTML.");
+      return;
+    }
+    // Usar jsPDF
+    const doc = new (window.jspdf ? window.jspdf.jsPDF : window.jsPDF)();
+    // Convertir la tabla HTML a texto plano para el PDF
+    const table = reporteDiv.querySelector("table");
+    if (!table) {
+      alert("No hay tabla para exportar.");
+      return;
+    }
+    // Usar autoTable si está disponible
+    if (doc.autoTable) {
+      doc.autoTable({ html: table });
+    } else {
+      // Fallback simple: solo texto
+      doc.text(table.innerText, 10, 10);
+    }
+    doc.save("reporte.pdf");
+  };
 });
 
 // Cargar productos vendidos al cargar la página

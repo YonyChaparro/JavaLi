@@ -9,7 +9,6 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  
   "dependencies": {
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
