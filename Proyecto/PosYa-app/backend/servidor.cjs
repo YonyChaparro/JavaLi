@@ -11,7 +11,8 @@ const PORT = 3000;
 app.use(cors());
 
 // Conexión a la base de datos SQLite
-const db = new sqlite3.Database('./base_de_datos.db', (err) => {
+const dbPath = path.join(__dirname, 'base_de_datos.db');
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error al conectar a la base de datos:', err.message);
   } else {
@@ -88,7 +89,7 @@ app.get('/api/insertar-datos-prueba', (req, res) => {
 
   // Insertar venta
   const ventas = [
-    ["V001", "2025-06-20", "10:00", 181644040, 184550344, "C001", "CC", "Juan", "Pérez", null, "Calle 1", "555-1234", "Bogotá", "juan@mail.com", "Pedro S.A.", "V001", "Calle 2", "555-5678", "Bogotá", "Responsable"]
+    ["V002", "2025-06-21", "10:49", 181644040, 184550344, "C001", "CC", "Juan", "Pérez", null, "Calle 1", "555-1234", "Bogotá", "juan@mail.com", "Pedro S.A.", "V001", "Calle 2", "555-5678", "Bogotá", "Responsable"]
   ];
   const stmtVenta = db.prepare('INSERT OR IGNORE INTO VENTA (ven_codigo, ven_fecha, ven_hora, ven_subtotal, ven_total, ven_identificacion_cliente, ven_tipo_identificacion_cliente, ven_nombre_cliente, ven_apellido_cliente, ven_razon_social_cliente, ven_direccion_cliente, ven_numero_telefonico_cliente, ven_ciudad_cliente, ven_correo_electronico_cliente, ven_nombre_o_razon_social_vendedor, ven_NIT_vendedor, ven_direccion_vendedor, ven_numero_de_contacto_vendedor, ven_municipio_vendedor, ven_responsabilidad_fiscal_vendedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   ventas.forEach(v => stmtVenta.run(v));
@@ -96,9 +97,9 @@ app.get('/api/insertar-datos-prueba', (req, res) => {
 
   // Insertar detalle
   const detalles = [
-    [1, "Muñeca inflable", 2, 90822020, 892399, 2906304, 181644040, 184550344, "V001"]
+    ["Muñeco", 2, 90822020, 892399, 2906304, 181644040, 184550344, "V002"]
   ];
-  const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_numero, det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   detalles.forEach(d => stmtDet.run(d));
   stmtDet.finalize();
 
@@ -116,6 +117,80 @@ app.get('/api/productos-vendidos', (req, res) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
+    res.json(rows);
+  });
+});
+
+// Endpoint para obtener historial de ventas
+app.get('/api/historial_ventas', (req, res) => {
+  const query = `
+    SELECT 
+      ven_codigo AS numero,
+      ven_fecha AS fecha,
+      ven_hora AS hora,
+      ven_nombre_cliente || ' ' || IFNULL(ven_apellido_cliente, '') AS cliente,
+      ven_total AS total
+    FROM VENTA
+    ORDER BY ven_fecha DESC, ven_hora DESC
+  `;
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else {
+      // Formatear el total como moneda
+      const ventas = rows.map(v => ({
+        ...v,
+        total: typeof v.total === 'number' ? `$${v.total.toFixed(2)}` : v.total
+      }));
+      res.json(ventas);
+    }
+  });
+});
+
+// Endpoint para obtener información general de una venta
+app.get('/api/venta', (req, res) => {
+  const codigo = req.query.codigo;
+  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+
+  const query = `
+    SELECT 
+      ven_codigo AS numero,
+      ven_fecha AS fecha,
+      ven_hora AS hora,
+      ven_nombre_cliente || ' ' || IFNULL(ven_apellido_cliente, '') AS cliente,
+      ven_total AS total,
+      ven_direccion_cliente AS direccion_cliente,
+      ven_correo_electronico_cliente AS correo_cliente,
+      ven_nombre_o_razon_social_vendedor AS vendedor
+    FROM VENTA
+    WHERE ven_codigo = ?
+  `;
+  db.get(query, [codigo], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Venta no encontrada' });
+    row.total = typeof row.total === 'number' ? `$${row.total.toFixed(2)}` : row.total;
+    res.json(row);
+  });
+});
+
+// Endpoint para obtener detalle de productos vendidos en una venta
+app.get('/api/venta_detalle', (req, res) => {
+  const codigo = req.query.codigo;
+  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+
+  const query = `
+    SELECT 
+      det_nombre_producto,
+      det_cantidad,
+      det_precio_unitario,
+      det_submonto,
+      det_IVA_unitario,
+      det_monto
+    FROM DETALLE_PRODUCTO_VENDIDO
+    WHERE ven_codigo = ?
+  `;
+  db.all(query, [codigo], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
