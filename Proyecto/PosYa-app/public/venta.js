@@ -77,48 +77,137 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // Lógica para generar PDF con jsPDF
         pdfBtn.onclick = () => {
-            if (!window.jspdf) {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                script.onload = () => generarPDF();
-                document.body.appendChild(script);
-            } else {
-                generarPDF();
-            }
-            function generarPDF() {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                let y = 10;
-                doc.setFontSize(16);
-                doc.text('Detalle de Venta', 10, y);
-                y += 10;
-                doc.setFontSize(12);
-                doc.text(`Número: ${venta.numero}`, 10, y); y += 7;
-                doc.text(`Fecha: ${venta.fecha}`, 10, y); y += 7;
-                doc.text(`Hora: ${venta.hora}`, 10, y); y += 7;
-                doc.text(`Cliente: ${venta.cliente}`, 10, y); y += 7;
-                doc.text(`Total: ${venta.total}`, 10, y); y += 7;
-                doc.text(`Dirección Cliente: ${venta.direccion_cliente || ''}`, 10, y); y += 7;
-                doc.text(`Correo Cliente: ${venta.correo_cliente || ''}`, 10, y); y += 7;
-                doc.text(`Vendedor: ${venta.vendedor || ''}`, 10, y); y += 10;
-                doc.setFontSize(14);
-                doc.text('Productos Vendidos:', 10, y); y += 8;
-                doc.setFontSize(10);
-                doc.text('Producto | Cantidad | Precio Unitario | Subtotal | IVA | Total', 10, y); y += 6;
-                productos.forEach(p => {
-                    doc.text(
-                        `${p.det_nombre_producto} | ${p.det_cantidad} | $${Number(p.det_precio_unitario).toFixed(2)} | $${Number(p.det_submonto).toFixed(2)} | $${Number(p.det_IVA_unitario).toFixed(2)} | $${Number(p.det_monto).toFixed(2)}`,
-                        10, y
-                    );
-                    y += 6;
-                    if (y > 270) { doc.addPage(); y = 10; }
-                });
-                doc.save(`venta_${venta.numero}.pdf`);
-            }
-        };
+
+            generarPDFVenta(venta, productos);
+  
+        }
+
     } catch (error) {
         detalleVentaDiv.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
         detalleProductosDiv.innerHTML = '';
         console.error(error);
     }
 });
+
+async function generarPDFVenta(venta, productos) {
+    // Cargar jsPDF si no está presente
+    if (!window.jspdf) {
+        await new Promise(resolve => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.onload = resolve;
+            document.body.appendChild(script);
+        });
+    }
+    const { jsPDF } = window.jspdf;
+
+    // Crear iframe oculto
+    const iframe = document.createElement('iframe');
+    Object.assign(iframe.style, {
+        position: 'fixed',
+        left: '-99999px',
+        top: '0',
+        width: '1200px',
+        height: '1600px',
+        zIndex: '-1',
+    });
+    document.body.appendChild(iframe);
+
+    // Cargar el mockup
+    const html = await fetch('mockup_factura_venta.html').then(r => r.text());
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+
+    await new Promise(res => setTimeout(res, 300));
+    const docHTML = iframe.contentDocument.body;
+
+
+    // Rellenar datos del mockup con los nombres de propiedad correctos del backend
+    const razonSocial = docHTML.querySelector('.razon-social');
+    if (razonSocial) razonSocial.textContent = venta.vendedor || 'Vendedor';
+    const infoNodes = docHTML.querySelectorAll('.info');
+    if (infoNodes[0]) infoNodes[0].textContent = `NIT: ${venta.nit_vendedor || ''}`;
+    if (infoNodes[1]) infoNodes[1].textContent = `Responsabilidad Fiscal: ${venta.responsabilidad_fiscal_vendedor || ''}`;
+    if (infoNodes[2]) infoNodes[2].textContent = `Dirección: ${venta.direccion_vendedor || ''}`;
+    if (infoNodes[3]) infoNodes[3].textContent = `Municipio: ${venta.municipio_vendedor || ''}`;
+    if (infoNodes[4]) infoNodes[4].textContent = `Teléfono: ${venta.contacto_vendedor || ''}`;
+
+    const clienteDiv = docHTML.querySelector('.cliente');
+    if (clienteDiv) {
+        const clienteDivs = clienteDiv.querySelectorAll('div');
+        const clienteNombre = venta.ven_nombre_cliente && venta.ven_apellido_cliente
+            ? `${venta.ven_nombre_cliente} ${venta.ven_apellido_cliente}`
+            : (venta.ven_razon_social_cliente || venta.cliente || '');
+        if (clienteDivs[1]) clienteDivs[1].textContent = clienteNombre;
+        if (clienteDivs[2]) clienteDivs[2].textContent = `Dirección: ${venta.ven_direccion_cliente || venta.direccion_cliente || ''}`;
+        if (clienteDivs[3]) clienteDivs[3].textContent = `Correo: ${venta.ven_correo_electronico_cliente || venta.correo_cliente || ''}`;
+        if (clienteDivs[4]) clienteDivs[4].textContent = `Teléfono: ${venta.telefono_cliente || ''}`;
+    }
+
+    const datosFactura = docHTML.querySelectorAll('.datos-factura .dato');
+    if (datosFactura[0]) datosFactura[0].innerHTML = `<strong>Factura No.:</strong> ${venta.ven_codigo || venta.numero || ''}`;
+    if (datosFactura[1]) datosFactura[1].innerHTML = `<strong>Fecha:</strong> ${venta.ven_fecha || venta.fecha || ''}`;
+    if (datosFactura[2]) datosFactura[2].innerHTML = `<strong>Hora:</strong> ${venta.ven_hora || venta.hora || ''}`;
+
+    const tbody = docHTML.querySelector('.productos-table tbody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        let subtotal = 0, totalIVA = 0, total = 0;
+        productos.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.det_nombre_producto}</td>
+                <td>${p.det_cantidad}</td>
+                <td>$${Number(p.det_precio_unitario).toFixed(2)}</td>
+                <td>$${Number(p.det_IVA_unitario).toFixed(2)}</td>
+                <td>$${Number(p.det_submonto).toFixed(2)}</td>
+                <td>$${Number(p.det_monto).toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+            subtotal += Number(p.det_submonto);
+            totalIVA += Number(p.det_IVA_unitario) * Number(p.det_cantidad);
+            total += Number(p.det_monto);
+        });
+        const totales = docHTML.querySelectorAll('.totales .linea');
+        if (totales[0]) totales[0].innerHTML = `Subtotal: <strong>$${subtotal.toFixed(2)}</strong>`;
+        if (totales[1]) totales[1].innerHTML = `IVA: <strong>$${totalIVA.toFixed(2)}</strong>`;
+        if (totales[2]) totales[2].innerHTML = `Otros: <strong>$0.00</strong>`;
+        const totalNode = docHTML.querySelector('.totales .total');
+        if (totalNode) totalNode.textContent = `TOTAL: $${total.toFixed(2)}`;
+    }
+
+    // Cargar html2canvas si es necesario
+    if (!window.html2canvas) {
+        await new Promise(resolve => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.onload = resolve;
+            document.body.appendChild(script);
+        });
+    }
+
+    await new Promise(res => setTimeout(res, 300));
+
+    // Generar PDF usando una imagen del mockup para máxima fidelidad visual
+    const rect = docHTML.querySelector('.factura-container').getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    // Usar html2canvas para capturar solo la factura
+    const canvas = await window.html2canvas(docHTML.querySelector('.factura-container'), {
+        backgroundColor: '#fff',
+        scale: 2,
+        useCORS: true,
+        width: width,
+        height: height
+    });
+    const imgData = canvas.toDataURL('image/png');
+    // Crear PDF con tamaño ajustado a la imagen
+    const pdfWidth = width * 0.75; // 1px = 0.75pt
+    const pdfHeight = height * 0.75;
+    const doc = new jsPDF({ orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait', unit: 'pt', format: [pdfWidth, pdfHeight] });
+    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const nombreArchivo = `venta_${venta.numero || venta.ven_codigo || 'factura'}.pdf`;
+    doc.save(nombreArchivo);
+    setTimeout(() => iframe.remove(), 500);
+}

@@ -97,7 +97,7 @@ app.get('/api/insertar-datos-prueba', (req, res) => {
 
   // Insertar detalle
   const detalles = [
-    ["Muñeco", 2, 90822020, 892399, 2906304, 181644040, 184550344, "V002"]
+    ["Argolla analizadora", 23, 90000, 900, 9000, 818272, 289892, "V002"]
   ];
   const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   detalles.forEach(d => stmtDet.run(d));
@@ -161,7 +161,13 @@ app.get('/api/venta', (req, res) => {
       ven_total AS total,
       ven_direccion_cliente AS direccion_cliente,
       ven_correo_electronico_cliente AS correo_cliente,
-      ven_nombre_o_razon_social_vendedor AS vendedor
+      ven_numero_telefonico_cliente AS telefono_cliente,
+      ven_nombre_o_razon_social_vendedor AS vendedor,
+      ven_NIT_vendedor AS nit_vendedor,
+      ven_direccion_vendedor AS direccion_vendedor,
+      ven_numero_de_contacto_vendedor AS contacto_vendedor,
+      ven_municipio_vendedor AS municipio_vendedor,
+      ven_responsabilidad_fiscal_vendedor AS responsabilidad_fiscal_vendedor
     FROM VENTA
     WHERE ven_codigo = ?
   `;
