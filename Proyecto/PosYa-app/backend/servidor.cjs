@@ -9,6 +9,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(cors());
+app.use(express.json());
 
 // Conexión a la base de datos SQLite
 const dbPath = path.join(__dirname, 'base_de_datos.db');
@@ -102,6 +103,17 @@ app.get('/api/insertar-datos-prueba', (req, res) => {
   const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   detalles.forEach(d => stmtDet.run(d));
   stmtDet.finalize();
+
+  // Insertar tipos de movimiento de inventario
+  const tiposMovimiento = [
+    [1, "Entrada por compra", "Entrada"],
+    [2, "Salida por venta", "Salida"],
+    [3, "Ajuste positivo", "Entrada"],
+    [4, "Ajuste negativo", "Salida"]
+  ];
+  const stmtTipoMov = db.prepare('INSERT OR IGNORE INTO TIPO_MOVIMIENTO_INVENTARIO (tip_codigo, tip_nombre, tip_tipo_flujo) VALUES (?, ?, ?)');
+  tiposMovimiento.forEach(t => stmtTipoMov.run(t));
+  stmtTipoMov.finalize();
 
   res.json({ ok: true });
 });
@@ -199,6 +211,84 @@ app.get('/api/venta_detalle', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
+});
+
+// Endpoint para obtener tipos de movimiento de inventario
+app.get('/api/tipos-movimiento', (req, res) => {
+  const query = 'SELECT tip_codigo, tip_nombre, tip_tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO';
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Endpoint para eliminar un tipo de movimiento de inventario
+app.delete('/api/tipos-movimiento/:codigo', (req, res) => {
+  const codigo = req.params.codigo;
+  db.run('DELETE FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_codigo = ?', [codigo], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
+    }
+    res.json({ ok: true });
+  });
+});
+
+// Endpoint para crear un tipo de movimiento de inventario
+app.post('/api/tipos-movimiento', (req, res) => {
+  const { tip_nombre, tip_tipo_flujo } = req.body;
+  if (!tip_nombre || !tip_tipo_flujo) {
+    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  }
+  db.run(
+  'INSERT INTO TIPO_MOVIMIENTO_INVENTARIO (tip_nombre, tip_tipo_flujo) VALUES (?, ?)',
+  [tip_nombre, tip_tipo_flujo],
+  function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ ok: true, tip_codigo: this.lastID });
+  });
+});
+
+// Endpoint para obtener un tipo de movimiento por código
+app.get('/api/tipos-movimiento/:codigo', (req, res) => {
+  const codigo = req.params.codigo;
+  db.get('SELECT tip_codigo, tip_nombre, tip_tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_codigo = ?', [codigo], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
+    }
+    res.json(row);
+  });
+});
+
+// Endpoint para actualizar un tipo de movimiento
+app.put('/api/tipos-movimiento/:codigo', (req, res) => {
+  const codigo = req.params.codigo;
+  const { tip_nombre, tip_tipo_flujo } = req.body;
+  if (!tip_nombre || !tip_tipo_flujo) {
+    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  }
+  db.run(
+    'UPDATE TIPO_MOVIMIENTO_INVENTARIO SET tip_nombre = ?, tip_tipo_flujo = ? WHERE tip_codigo = ?',
+    [tip_nombre, tip_tipo_flujo, codigo],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
+      }
+      res.json({ ok: true });
+    }
+  );
 });
 
 app.listen(PORT, () => {

@@ -8,6 +8,10 @@ export default function HomeMenu() {
         window.open('/historial_ventas.html', '_blank');
     };
 
+    const abrirTiposDeMovimiento = () => {
+        window.open('/tipos_de_movimiento.html', '_blank');
+    };
+
     return (
         <div className="w-screen h-screen bg-[#06327d] p-6">
             <div className="w-full h-full grid grid-cols-4 grid-rows-2 gap-[24px] text-black">
@@ -47,7 +51,7 @@ export default function HomeMenu() {
                 {/* Otras 6 funcionalidades */}
                 {[
                     { label: 'Clientes', icon: '/icons/clientes.png' },
-                    { label: 'Inventario', icon: '/icons/inventario.png' },
+                    { label: 'Inventario', icon: '/icons/inventario.png', onClick: abrirTiposDeMovimiento},
                     { label: 'Factura ordinaria', icon: '/icons/factura-ordinaria.png' },
                     { label: 'Reportes', icon: '/icons/reportes.png', onClick: abrirReporte},
                     { label: 'Vendedor', icon: '/icons/vendedor.webp' },

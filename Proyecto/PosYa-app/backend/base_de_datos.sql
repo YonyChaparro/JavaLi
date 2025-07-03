@@ -5,13 +5,7 @@ CREATE TABLE IF NOT EXISTS PRODUCTO (
   pro_precio REAL,
   pro_descripcion TEXT,
   pro_estado TEXT,
-  tip_codigo_iva TEXT
-);
-
-CREATE TABLE IF NOT EXISTS TIPO_IVA (
-  tip_codigo TEXT PRIMARY KEY,
-  tip_nombre TEXT,
-  tip_porcentaje REAL
+  pro_tasa_IVA REAL
 );
 
 CREATE TABLE IF NOT EXISTS PRODUCTO_BIEN (
@@ -27,6 +21,13 @@ CREATE TABLE IF NOT EXISTS TIPO_MOVIMIENTO_INVENTARIO (
   tip_nombre TEXT,
   tip_tipo_flujo TEXT
 );
+
+-- Insertar tipos de movimiento por defecto
+INSERT OR IGNORE INTO TIPO_MOVIMIENTO_INVENTARIO (tip_codigo, tip_nombre, tip_tipo_flujo) VALUES
+  ('ENT_VOL', 'Entrada voluntaria de productos', 'Entrada'),
+  ('SAL_VOL', 'Salida voluntaria de productos', 'Salida'),
+  ('SAL_DET', 'Deterioro de productos', 'Salida'),
+  ('SAL_VTA', 'Venta de productos', 'Salida');
 
 CREATE TABLE IF NOT EXISTS MOVIMIENTO_INVENTARIO (
   mov_id INTEGER PRIMARY KEY,
