@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Vendedor</title>
+
+</head>
+<body>
+    <h2>Editar Datos del Vendedor</h2>
+    <form id="form-vendedor">
+        <div>
+            <label for="ven_NIT">NIT</label><br>
+            <input type="text" id="ven_NIT" name="ven_NIT">
+        </div>
+        <div>
+            <label for="ven_nombre_o_razon_social">Nombre o Razón Social</label><br>
+            <input type="text" id="ven_nombre_o_razon_social" name="ven_nombre_o_razon_social">
+        </div>
+        <div>
+            <label for="ven_direccion">Dirección</label><br>
+            <input type="text" id="ven_direccion" name="ven_direccion">
+        </div>
+        <div>
+            <label for="ven_numero_de_contacto">Número de Contacto</label><br>
+            <input type="tel" id="ven_numero_de_contacto" name="ven_numero_de_contacto" 
+                pattern="(\+57\s?3[0-9]{2}\s?[0-9]{3}\s?[0-9]{4}|3[0-9]{2}\s?[0-9]{3}\s?[0-9]{4})" 
+                placeholder="+57 3XX XXX XXXX o 3XX XXX XXXX" 
+                inputmode="numeric" maxlength="17" 
+                oninput="this.value=this.value.replace(/[^0-9\+ ]/g,'')">
+        </div>
+        <div>
+            <label for="ven_municipio">Municipio</label><br>
+            <input type="text" id="ven_municipio" name="ven_municipio">
+        </div>
+        <div>
+            <label for="ven_responsabilidad_fiscal">Responsabilidad Fiscal</label><br>
+            <input type="text" id="ven_responsabilidad_fiscal" name="ven_responsabilidad_fiscal">
+        </div>
+        <div>
+            <button type="submit">Guardar Cambios</button>
+        </div>
+    </form>
+    <script src="edicion_vendedor.js"></script>
+</body>
+</html>
