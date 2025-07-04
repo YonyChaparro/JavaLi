@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FiEdit2, FiTrash2, FiChevronLeft } from 'react-icons/fi';
 import EditarTipoMovimiento from './EditarTipoMovimiento';
 
 function TipoMovimientoRow({ row, onEdit, onDelete }) {
@@ -9,13 +10,19 @@ function TipoMovimientoRow({ row, onEdit, onDelete }) {
       <td className="py-2 px-4 border-b">{row.tip_tipo_flujo}</td>
       <td className="py-2 px-4 border-b text-center">
         <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded mr-2"
-          onClick={() => onEdit(row)}
-        >Editar</button>
+          onClick={e => { e.stopPropagation(); onEdit(row); }}
+          className="text-blue-600 hover:text-blue-900 mr-3"
+          title="Editar tipo de movimiento"
+        >
+          <FiEdit2 size={16} />
+        </button>
         <button
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
-          onClick={() => onDelete(row)}
-        >Eliminar</button>
+          onClick={e => { e.stopPropagation(); onDelete(row); }}
+          className="text-red-600 hover:text-red-900"
+          title="Eliminar tipo de movimiento"
+        >
+          <FiTrash2 size={16} />
+        </button>
       </td>
     </tr>
   );
@@ -140,7 +147,7 @@ function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 
   );
 }
 
-export default function TipoMovimiento() {
+export default function TipoMovimiento({ onBack }) {
   const [tipos, setTipos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -213,40 +220,52 @@ export default function TipoMovimiento() {
   };
 
   return (
-    <div className="bg-gray-50 p-8 min-h-screen">
+    <div className="bg-white rounded-md shadow-sm border border-gray-200 relative font-sans text-sm">
       {/* Contenedor de Notificación */}
       {notification.message && (
-        <div className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white z-50 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
-          {notification.message}
-        </div>
+        <div className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white z-50 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>{notification.message}</div>
       )}
-      <h1 className="text-2xl font-bold mb-6">Tipos de Movimiento de Inventario</h1>
-      <div className="mb-4 flex justify-end">
-        <button
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-          onClick={() => {
-            setCrearKey(Date.now());
-            setShowCrear(true);
-          }}
-        >
-          Crear tipo de movimiento
-        </button>
+      {/* Barra de herramientas */}
+      <div className="flex justify-between items-center p-3 border-b border-gray-200">
+        <div className="flex space-x-2">
+          <button
+            className="flex items-center px-3 py-1 text-sm bg-green-50 text-green-700 rounded hover:bg-green-100 font-semibold"
+            onClick={() => {
+              setCrearKey(Date.now());
+              setShowCrear(true);
+            }}
+          >
+            <span className="mr-1">+</span> Crear
+          </button>
+          <button
+            onClick={onBack}
+            className="flex items-center px-3 py-1 text-sm bg-gray-50 text-gray-600 rounded hover:bg-gray-100"
+          >
+            <FiChevronLeft className="mr-1" /> Volver
+          </button>
+        </div>
+        {/* Aquí podrías agregar búsqueda si lo deseas */}
       </div>
+      {/* Tabla de tipos de movimiento */}
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300 rounded-lg shadow">
-          <thead>
+        <table className="min-w-full divide-y divide-gray-200 font-sans text-sm">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="py-2 px-4 border-b">Código</th>
-              <th className="py-2 px-4 border-b">Nombre</th>
-              <th className="py-2 px-4 border-b">Tipo de Flujo</th>
-              <th className="py-2 px-4 border-b text-center">Acciones</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Flujo</th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
-              <tr><td colSpan={4} className="text-center py-4">Cargando...</td></tr>
+              <tr>
+                <td colSpan="4" className="px-4 py-4 text-center text-sm text-gray-500">Cargando tipos de movimiento...</td>
+              </tr>
             ) : tipos.length === 0 ? (
-              <tr><td colSpan={4} className="text-center py-4">No hay registros</td></tr>
+              <tr>
+                <td colSpan="4" className="px-4 py-4 text-center text-sm text-gray-500">No hay tipos de movimiento registrados</td>
+              </tr>
             ) : (
               tipos.map(row => (
                 <TipoMovimientoRow
@@ -260,6 +279,7 @@ export default function TipoMovimiento() {
           </tbody>
         </table>
       </div>
+      {/* Modales */}
       {showCrear && (
         <CrearTipoMovimientoModal
           key={crearKey}
