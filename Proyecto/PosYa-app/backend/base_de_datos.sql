@@ -17,30 +17,32 @@ CREATE TABLE IF NOT EXISTS PRODUCTO_SERVICIO (
 );
 
 CREATE TABLE IF NOT EXISTS TIPO_MOVIMIENTO_INVENTARIO (
-  tip_codigo TEXT PRIMARY KEY,
+  tip_codigo INTEGER PRIMARY KEY,
   tip_nombre TEXT,
-  tip_tipo_flujo TEXT
+  tip_tipo_flujo TEXT -- 'Entrada' o 'Salida'
 );
 
 -- Insertar tipos de movimiento por defecto
 INSERT OR IGNORE INTO TIPO_MOVIMIENTO_INVENTARIO (tip_codigo, tip_nombre, tip_tipo_flujo) VALUES
-  ('ENT_VOL', 'Entrada voluntaria de productos', 'Entrada'),
-  ('SAL_VOL', 'Salida voluntaria de productos', 'Salida'),
-  ('SAL_DET', 'Deterioro de productos', 'Salida'),
-  ('SAL_VTA', 'Venta de productos', 'Salida');
+  (1, 'Entrada voluntaria de productos', 'Entrada'),
+  (2, 'Salida voluntaria de productos', 'Salida'),
+  (3, 'Deterioro de productos', 'Salida'),
+  (4, 'Venta de productos', 'Salida');
 
 CREATE TABLE IF NOT EXISTS MOVIMIENTO_INVENTARIO (
   mov_id INTEGER PRIMARY KEY,
   mov_fecha TEXT,
   mov_cantidad INTEGER,
-  tip_codigo TEXT,
+  tip_codigo INTEGER,
   pro_codigo TEXT
 );
 
 CREATE TABLE IF NOT EXISTS CLIENTE (
   cli_identificacion TEXT PRIMARY KEY,
   cli_direccion TEXT,
-  cli_correo_electronico TEXT
+  cli_correo_electronico TEXT,
+  cli_ciudad TEXT,
+  cli_numero_telefonico INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS CLIENTE_NATURAL (

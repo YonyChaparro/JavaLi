@@ -1,4 +1,11 @@
+import { useState } from 'react';
+import ListaClientes from '../components/ListaClientes';
+import TipoMovimiento from '../components/TipoMovimiento';
+
 export default function HomeMenu() {
+
+    const [mostrarListaClientes, setMostrarListaClientes] = useState(false);
+    const [mostrarTipoMovimiento, setMostrarTipoMovimiento] = useState(false);
 
     const abrirReporte = () => {
         window.open('/reportes.html', '_blank');
@@ -8,8 +15,9 @@ export default function HomeMenu() {
         window.open('/historial_ventas.html', '_blank');
     };
 
+    // Cambiar para abrir el modal React en vez de la ventana HTML
     const abrirTiposDeMovimiento = () => {
-        window.open('/tipos_de_movimiento.html', '_blank');
+        setMostrarTipoMovimiento(true);
     };
 
     return (
@@ -50,7 +58,7 @@ export default function HomeMenu() {
 
                 {/* Otras 6 funcionalidades */}
                 {[
-                    { label: 'Clientes', icon: '/icons/clientes.png' },
+                    { label: 'Clientes', icon: '/icons/clientes.png', onClick: () => setMostrarListaClientes(true) },
                     { label: 'Inventario', icon: '/icons/inventario.png', onClick: abrirTiposDeMovimiento},
                     { label: 'Factura ordinaria', icon: '/icons/factura-ordinaria.png' },
                     { label: 'Reportes', icon: '/icons/reportes.png', onClick: abrirReporte},
@@ -75,6 +83,31 @@ export default function HomeMenu() {
                 })}
 
             </div>
+            {/* Modal para ListaClientes */}
+            {mostrarListaClientes && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <ListaClientes
+                        onAddClient={() => {}}
+                        onEditClient={() => {}}
+                        onDeleteClient={() => {}}
+                        onBack={() => setMostrarListaClientes(false)}
+                    />
+                </div>
+            )}
+            {/* Modal para TipoMovimiento */}
+            {mostrarTipoMovimiento && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-auto relative">
+                        <button
+                          className="absolute top-4 right-4 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded px-3 py-1 font-bold"
+                          onClick={() => setMostrarTipoMovimiento(false)}
+                        >
+                          Cerrar
+                        </button>
+                        <TipoMovimiento />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -72,21 +72,42 @@ app.get('/api/reportes', (req, res) => {
 app.get('/api/insertar-datos-prueba', (req, res) => {
   // Insertar productos
   const productos = [
-    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", "IVA1"],
-    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", "IVA2"]
+    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", 0.19],
+    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", 0.05]
   ];
-  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, tip_codigo_iva) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, pro_tasa_IVA) VALUES (?, ?, ?, ?, ?, ?, ?)');
   productos.forEach(p => stmtProd.run(p));
   stmtProd.finalize();
 
-  // Insertar IVA
-  const ivas = [
-    ["IVA1", "IVA General", 0.16],
-    ["IVA2", "IVA Reducido", 0.08]
+  // Insertar cliente de prueba (natural)
+  const cliente = [
+    "1234567890", // cli_identificacion
+    "Calle Falsa 123", // cli_direccion
+    "cliente@correo.com", // cli_correo_electronico
+    "Bogotá", // cli_ciudad
+    "3001234567" // cli_numero_telefonico
   ];
-  const stmtIva = db.prepare('INSERT OR IGNORE INTO TIPO_IVA (tip_codigo, tip_nombre, tip_porcentaje) VALUES (?, ?, ?)');
-  ivas.forEach(i => stmtIva.run(i));
-  stmtIva.finalize();
+  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', cliente);
+  db.run('INSERT OR IGNORE INTO CLIENTE_NATURAL (cli_identificacion, cli_tipo_de_documento, cli_nombre, cli_apellido) VALUES (?, ?, ?, ?)', [
+    "1234567890", // cli_identificacion
+    "CC", // cli_tipo_de_documento
+    "Juan Carlos", // cli_nombre
+    "Pérez Gómez" // cli_apellido
+  ]);
+
+  // Insertar cliente de prueba (jurídico)
+  const clienteJuridico = [
+    "900123456", // cli_identificacion (NIT)
+    "Avenida Siempre Viva 742", // cli_direccion
+    "empresa@correo.com", // cli_correo_electronico
+    "Medellín", // cli_ciudad
+    "6041234567" // cli_numero_telefonico
+  ];
+  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', clienteJuridico);
+  db.run('INSERT OR IGNORE INTO CLIENTE_JURIDICO (cli_identificacion, cli_razon_social) VALUES (?, ?)', [
+    "900123456", // cli_identificacion
+    "Soluciones Empresariales S.A.S." // cli_razon_social
+  ]);
 
   // Insertar venta
   const ventas = [
@@ -103,17 +124,6 @@ app.get('/api/insertar-datos-prueba', (req, res) => {
   const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   detalles.forEach(d => stmtDet.run(d));
   stmtDet.finalize();
-
-  // Insertar tipos de movimiento de inventario
-  const tiposMovimiento = [
-    [1, "Entrada por compra", "Entrada"],
-    [2, "Salida por venta", "Salida"],
-    [3, "Ajuste positivo", "Entrada"],
-    [4, "Ajuste negativo", "Salida"]
-  ];
-  const stmtTipoMov = db.prepare('INSERT OR IGNORE INTO TIPO_MOVIMIENTO_INVENTARIO (tip_codigo, tip_nombre, tip_tipo_flujo) VALUES (?, ?, ?)');
-  tiposMovimiento.forEach(t => stmtTipoMov.run(t));
-  stmtTipoMov.finalize();
 
   res.json({ ok: true });
 });
@@ -191,26 +201,64 @@ app.get('/api/venta', (req, res) => {
   });
 });
 
-// Endpoint para obtener detalle de productos vendidos en una venta
-app.get('/api/venta_detalle', (req, res) => {
-  const codigo = req.query.codigo;
-  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+// Endpoint: insertar datos de prueba
+app.get('/api/insertar-datos-prueba', (req, res) => {
+  // Insertar productos
+  const productos = [
+    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", 0.19],
+    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", 0.05]
+  ];
+  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, pro_tasa_IVA) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  productos.forEach(p => stmtProd.run(p));
+  stmtProd.finalize();
 
-  const query = `
-    SELECT 
-      det_nombre_producto,
-      det_cantidad,
-      det_precio_unitario,
-      det_submonto,
-      det_IVA_unitario,
-      det_monto
-    FROM DETALLE_PRODUCTO_VENDIDO
-    WHERE ven_codigo = ?
-  `;
-  db.all(query, [codigo], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  // Insertar cliente de prueba (natural)
+  const cliente = [
+    "1234567890", // cli_identificacion
+    "Calle Falsa 123", // cli_direccion
+    "cliente@correo.com", // cli_correo_electronico
+    "Bogotá", // cli_ciudad
+    "3001234567" // cli_numero_telefonico
+  ];
+  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', cliente);
+  db.run('INSERT OR IGNORE INTO CLIENTE_NATURAL (cli_identificacion, cli_tipo_de_documento, cli_nombre, cli_apellido) VALUES (?, ?, ?, ?)', [
+    "1234567890", // cli_identificacion
+    "CC", // cli_tipo_de_documento
+    "Juan Carlos", // cli_nombre
+    "Pérez Gómez" // cli_apellido
+  ]);
+
+  // Insertar cliente de prueba (jurídico)
+  const clienteJuridico = [
+    "900123456", // cli_identificacion (NIT)
+    "Avenida Siempre Viva 742", // cli_direccion
+    "empresa@correo.com", // cli_correo_electronico
+    "Medellín", // cli_ciudad
+    "6041234567" // cli_numero_telefonico
+  ];
+  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', clienteJuridico);
+  db.run('INSERT OR IGNORE INTO CLIENTE_JURIDICO (cli_identificacion, cli_razon_social) VALUES (?, ?)', [
+    "900123456", // cli_identificacion
+    "Soluciones Empresariales S.A.S." // cli_razon_social
+  ]);
+
+  // Insertar venta
+  const ventas = [
+    ["V002", "2025-06-21", "10:49", 181644040, 184550344, "C001", "CC", "Juan", "Pérez", null, "Calle 1", "555-1234", "Bogotá", "juan@mail.com", "Pedro S.A.", "V001", "Calle 2", "555-5678", "Bogotá", "Responsable"]
+  ];
+  const stmtVenta = db.prepare('INSERT OR IGNORE INTO VENTA (ven_codigo, ven_fecha, ven_hora, ven_subtotal, ven_total, ven_identificacion_cliente, ven_tipo_identificacion_cliente, ven_nombre_cliente, ven_apellido_cliente, ven_razon_social_cliente, ven_direccion_cliente, ven_numero_telefonico_cliente, ven_ciudad_cliente, ven_correo_electronico_cliente, ven_nombre_o_razon_social_vendedor, ven_NIT_vendedor, ven_direccion_vendedor, ven_numero_de_contacto_vendedor, ven_municipio_vendedor, ven_responsabilidad_fiscal_vendedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  ventas.forEach(v => stmtVenta.run(v));
+  stmtVenta.finalize();
+
+  // Insertar detalle
+  const detalles = [
+    ["Argolla analizadora", 23, 90000, 900, 9000, 818272, 289892, "V002"]
+  ];
+  const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  detalles.forEach(d => stmtDet.run(d));
+  stmtDet.finalize();
+
+  res.json({ ok: true });
 });
 
 // Endpoint para obtener tipos de movimiento de inventario
@@ -291,6 +339,276 @@ app.put('/api/tipos-movimiento/:codigo', (req, res) => {
   );
 });
 
+// Endpoint para crear un cliente
+app.post('/api/clientes', (req, res) => {
+  const {
+    tipoCliente,
+    primerNombre,
+    segundoNombre,
+    primerApellido,
+    segundoApellido,
+    razonSocial,
+    tipoDocumento,
+    numeroDocumento,
+    direccion,
+    ciudad, 
+    telefono, 
+    email
+  } = req.body;
+
+  if (!numeroDocumento || !email) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  }
+
+  db.serialize(() => {
+    // Insertar en CLIENTE
+    db.run(
+      'INSERT OR REPLACE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)',
+      [numeroDocumento, direccion || '', email, ciudad || '', telefono || ''],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        if (tipoCliente === 'natural') {
+          // Construir nombre y apellido completos
+          const nombreCompleto = [primerNombre, segundoNombre].filter(Boolean).join(' ');
+          const apellidoCompleto = [primerApellido, segundoApellido].filter(Boolean).join(' ');
+          // Insertar en CLIENTE_NATURAL
+          db.run(
+            'INSERT OR REPLACE INTO CLIENTE_NATURAL (cli_identificacion, cli_tipo_de_documento, cli_nombre, cli_apellido) VALUES (?, ?, ?, ?)',
+            [numeroDocumento, tipoDocumento || '', nombreCompleto, apellidoCompleto],
+            function (err2) {
+              if (err2) {
+                return res.status(500).json({ error: err2.message });
+              }
+              res.status(201).json({
+                tipo: 'natural',
+                id: numeroDocumento,
+                primerNombre,
+                segundoNombre,
+                primerApellido,
+                segundoApellido,
+                tipoDocumento,
+                numeroDocumento,
+                direccion,
+                ciudad,
+                telefono,
+                email
+              });
+            }
+          );
+        } else if (tipoCliente === 'juridica') {
+          // Insertar en CLIENTE_JURIDICO
+          db.run(
+            'INSERT OR REPLACE INTO CLIENTE_JURIDICO (cli_identificacion, cli_razon_social) VALUES (?, ?)',
+            [numeroDocumento, razonSocial],
+            function (err2) {
+              if (err2) {
+                return res.status(500).json({ error: err2.message });
+              }
+              res.status(201).json({
+                tipo: 'juridica',
+                id: numeroDocumento,
+                razonSocial,
+                tipoDocumento: 'NIT',
+                numeroDocumento,
+                direccion,
+                ciudad,
+                telefono,
+                email
+              });
+            }
+          );
+        } else {
+          res.status(400).json({ error: 'Tipo de cliente desconocido' });
+        }
+      }
+    );
+  });
+});
+
+// Endpoint para obtener todos los clientes
+app.get('/api/clientes', (req, res) => {
+  // Consulta clientes base
+  const queryClientes = `SELECT cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico FROM CLIENTE`;
+  db.all(queryClientes, [], (err, clientes) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!clientes.length) return res.json([]);
+
+    // Consultar detalles de naturales y jurídicos
+    const ids = clientes.map(c => `'${c.cli_identificacion}'`).join(',');
+    const queryNaturales = `SELECT * FROM CLIENTE_NATURAL WHERE cli_identificacion IN (${ids})`;
+    const queryJuridicos = `SELECT * FROM CLIENTE_JURIDICO WHERE cli_identificacion IN (${ids})`;
+
+    db.all(queryNaturales, [], (err2, naturales) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      db.all(queryJuridicos, [], (err3, juridicos) => {
+        if (err3) return res.status(500).json({ error: err3.message });
+        // Unir datos
+        const naturalesMap = Object.fromEntries(naturales.map(n => [n.cli_identificacion, n]));
+        const juridicosMap = Object.fromEntries(juridicos.map(j => [j.cli_identificacion, j]));
+        const resultado = clientes.map(c => {
+          if (naturalesMap[c.cli_identificacion]) {
+            const n = naturalesMap[c.cli_identificacion];
+            return {
+              tipo: 'natural',
+              id: c.cli_identificacion,
+              primerNombre: (n.cli_nombre || '').split(' ')[0] || '',
+              segundoNombre: (n.cli_nombre || '').split(' ').slice(1).join(' '),
+              primerApellido: (n.cli_apellido || '').split(' ')[0] || '',
+              segundoApellido: (n.cli_apellido || '').split(' ').slice(1).join(' '),
+              tipoDocumento: n.cli_tipo_de_documento,
+              numeroDocumento: c.cli_identificacion,
+              direccion: c.cli_direccion,
+              ciudad: c.cli_ciudad,
+              telefono: c.cli_numero_telefonico,
+              email: c.cli_correo_electronico
+            };
+          } else if (juridicosMap[c.cli_identificacion]) {
+            const j = juridicosMap[c.cli_identificacion];
+            return {
+              tipo: 'juridica', // Siempre 'juridica' (femenino)
+              id: c.cli_identificacion,
+              razonSocial: j.cli_razon_social,
+              tipoDocumento: 'NIT',
+              numeroDocumento: c.cli_identificacion,
+              direccion: c.cli_direccion,
+              ciudad: c.cli_ciudad,
+              telefono: c.cli_numero_telefonico,
+              email: c.cli_correo_electronico
+            };
+          } else {
+            // Cliente sin detalle
+            return {
+              tipo: 'desconocido',
+              id: c.cli_identificacion,
+              numeroDocumento: c.cli_identificacion,
+              direccion: c.cli_direccion,
+              ciudad: c.cli_ciudad,
+              telefono: c.cli_numero_telefonico,
+              email: c.cli_correo_electronico
+            };
+          }
+        });
+        res.json(resultado);
+      });
+    });
+  });
+});
+
+// Endpoint para actualizar un cliente
+app.put('/api/clientes/:id', (req, res) => {
+  const id = req.params.id;
+  const {
+    tipoCliente,
+    primerNombre,
+    segundoNombre,
+    primerApellido,
+    segundoApellido,
+    razonSocial,
+    tipoDocumento,
+    numeroDocumento,
+    direccion,
+    ciudad,
+    telefono,
+    email
+  } = req.body;
+
+  if (!numeroDocumento || !email) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  }
+
+  db.serialize(() => {
+    // Actualizar CLIENTE
+    db.run(
+      'UPDATE CLIENTE SET cli_direccion = ?, cli_correo_electronico = ?, cli_ciudad = ?, cli_numero_telefonico = ? WHERE cli_identificacion = ?',
+      [direccion || '', email, ciudad || '', telefono || '', id],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        if (tipoCliente === 'natural') {
+          // Actualizar CLIENTE_NATURAL
+          const nombreCompleto = [primerNombre, segundoNombre].filter(Boolean).join(' ');
+          const apellidoCompleto = [primerApellido, segundoApellido].filter(Boolean).join(' ');
+          db.run(
+            'UPDATE CLIENTE_NATURAL SET cli_tipo_de_documento = ?, cli_nombre = ?, cli_apellido = ? WHERE cli_identificacion = ?',
+            [tipoDocumento || '', nombreCompleto, apellidoCompleto, id],
+            function (err2) {
+              if (err2) {
+                return res.status(500).json({ error: err2.message });
+              }
+              // Devolver el cliente actualizado
+              res.json({
+                tipo: 'natural',
+                id,
+                primerNombre,
+                segundoNombre,
+                primerApellido,
+                segundoApellido,
+                tipoDocumento,
+                numeroDocumento: id,
+                direccion,
+                ciudad,
+                telefono,
+                email
+              });
+            }
+          );
+        } else if (tipoCliente === 'juridica') {
+          // Actualizar CLIENTE_JURIDICO
+          db.run(
+            'UPDATE CLIENTE_JURIDICO SET cli_razon_social = ? WHERE cli_identificacion = ?',
+            [razonSocial, id],
+            function (err2) {
+              if (err2) {
+                return res.status(500).json({ error: err2.message });
+              }
+              res.json({
+                tipo: 'juridica',
+                id,
+                razonSocial,
+                tipoDocumento: 'NIT',
+                numeroDocumento: id,
+                direccion,
+                ciudad,
+                telefono,
+                email
+              });
+            }
+          );
+        } else {
+          res.status(400).json({ error: `Tipo de cliente desconocido: ${tipoCliente}` });
+        }
+      }
+    );
+  });
+});
+
+// Endpoint para eliminar un cliente
+app.delete('/api/clientes/:id', (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: 'Se requiere el ID del cliente' });
+  }
+
+  // Usamos serialize para asegurar que las eliminaciones se ejecuten en orden.
+  // Esto elimina al cliente de las tablas de detalle y luego de la tabla principal.
+  db.serialize(() => {
+    db.run('DELETE FROM CLIENTE_NATURAL WHERE cli_identificacion = ?', [id]);
+    db.run('DELETE FROM CLIENTE_JURIDICO WHERE cli_identificacion = ?', [id]);
+    db.run('DELETE FROM CLIENTE WHERE cli_identificacion = ?', [id], function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Cliente no encontrado' });
+      }
+      res.json({ ok: true, message: 'Cliente eliminado correctamente' });
+    });
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`Servidor backend escuchando en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
