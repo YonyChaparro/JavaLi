@@ -32,6 +32,87 @@ db.exec(sqlScript, (err) => {
   }
 });
 
+// Endpoint para consultar existencias actuales de un producto
+app.get('/api/existencias/:pro_codigo', (req, res) => {
+  const pro_codigo = req.params.pro_codigo;
+  // Suma todas las entradas y salidas para ese producto
+  const query = `
+    SELECT IFNULL(SUM(CASE WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad
+                           WHEN t.tip_tipo_flujo = 'Salida' THEN -m.mov_cantidad
+                           ELSE 0 END), 0) AS existencias
+    FROM MOVIMIENTO_INVENTARIO m
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
+    WHERE m.pro_codigo = ?
+  `;
+  db.get(query, [pro_codigo], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ existencias: row ? row.existencias : 0 });
+  });
+});
+
+// Endpoint para guardar movimientos de inventario (tip_codigo ahora es INTEGER)
+app.post('/api/movimientos-inventario', express.json(), (req, res) => {
+  const movimientos = req.body;
+  if (!Array.isArray(movimientos) || movimientos.length === 0) {
+    return res.status(400).json({ error: 'No hay movimientos para guardar.' });
+  }
+  const stmt = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (mov_fecha, mov_cantidad, tip_codigo, pro_codigo) VALUES (?, ?, ?, ?)');
+  const fecha = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  try {
+    movimientos.forEach(mov => {
+      // tip_codigo puede venir como string, lo convertimos a entero
+      const tip_codigo_int = parseInt(mov.tip_codigo, 10);
+      stmt.run(fecha, mov.cantidad, tip_codigo_int, mov.pro_codigo);
+    });
+    stmt.finalize();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Endpoint para obtener todos los tipos de movimiento de inventario
+app.get('/api/tipos-movimiento', (req, res) => {
+  db.all('SELECT tip_codigo, tip_nombre FROM TIPO_MOVIMIENTO_INVENTARIO ORDER BY tip_nombre', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Obtener el único vendedor (si existe)
+app.get('/api/vendedor', (req, res) => {
+  db.get('SELECT * FROM VENDEDOR LIMIT 1', [], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(204).send();
+    res.json(row);
+  });
+});
+
+// Crear o actualizar el único vendedor
+app.post('/api/vendedor', express.json(), (req, res) => {
+  db.run('DELETE FROM VENDEDOR', [], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    const v = req.body;
+    db.run(
+      `INSERT INTO VENDEDOR (ven_NIT, ven_nombre_o_razon_social, ven_direccion, ven_numero_de_contacto, ven_municipio, ven_responsabilidad_fiscal)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        v.ven_NIT,
+        v.ven_nombre_o_razon_social,
+        v.ven_direccion,
+        v.ven_numero_de_contacto,
+        v.ven_municipio,
+        v.ven_responsabilidad_fiscal
+      ],
+      function (err2) {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ ok: true });
+      }
+    );
+  });
+});
+
 // Endpoint: generar reporte
 app.get('/api/reportes', (req, res) => {
   const { producto, fechaInicio, fechaFin } = req.query;
@@ -70,24 +151,16 @@ app.get('/api/reportes', (req, res) => {
 
 // Endpoint: insertar datos de prueba
 app.get('/api/insertar-datos-prueba', (req, res) => {
-  // Insertar productos
-  const productos = [
-    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", 0.19],
-    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", 0.05]
-  ];
-  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, pro_tasa_IVA) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  productos.forEach(p => stmtProd.run(p));
-  stmtProd.finalize();
 
   // Insertar cliente de prueba (natural)
-  const cliente = [
+  const clienteNatural = [
     "1234567890", // cli_identificacion
     "Calle Falsa 123", // cli_direccion
     "cliente@correo.com", // cli_correo_electronico
     "Bogotá", // cli_ciudad
     "3001234567" // cli_numero_telefonico
   ];
-  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', cliente);
+  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', clienteNatural);
   db.run('INSERT OR IGNORE INTO CLIENTE_NATURAL (cli_identificacion, cli_tipo_de_documento, cli_nombre, cli_apellido) VALUES (?, ?, ?, ?)', [
     "1234567890", // cli_identificacion
     "CC", // cli_tipo_de_documento
@@ -108,6 +181,17 @@ app.get('/api/insertar-datos-prueba', (req, res) => {
     "900123456", // cli_identificacion
     "Soluciones Empresariales S.A.S." // cli_razon_social
   ]);
+
+
+
+  // Insertar productos
+  const productos = [
+    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", "IVA1"],
+    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", "IVA2"]
+  ];
+  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, tip_codigo_iva) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  productos.forEach(p => stmtProd.run(p));
+  stmtProd.finalize();
 
   // Insertar venta
   const ventas = [
@@ -151,6 +235,7 @@ app.get('/api/historial_ventas', (req, res) => {
       ven_fecha AS fecha,
       ven_hora AS hora,
       ven_nombre_cliente || ' ' || IFNULL(ven_apellido_cliente, '') AS cliente,
+      ven_razon_social_cliente,
       ven_total AS total
     FROM VENTA
     ORDER BY ven_fecha DESC, ven_hora DESC
@@ -166,6 +251,28 @@ app.get('/api/historial_ventas', (req, res) => {
       }));
       res.json(ventas);
     }
+  });
+});
+
+// Endpoint para obtener detalle de productos vendidos en una venta
+app.get('/api/venta_detalle', (req, res) => {
+  const codigo = req.query.codigo;
+  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+
+  const query = `
+    SELECT 
+      det_nombre_producto,
+      det_cantidad,
+      det_precio_unitario,
+      det_submonto,
+      det_IVA_unitario,
+      det_monto
+    FROM DETALLE_PRODUCTO_VENDIDO
+    WHERE ven_codigo = ?
+  `;
+  db.all(query, [codigo], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
 });
 
@@ -692,6 +799,208 @@ app.get('/api/productos', (req, res) => {
     }
     res.json(rows);
   });
+});
+
+// Endpoint para registrar una nueva venta y sus productos
+app.post('/api/venta', express.json(), async (req, res) => {
+  try {
+    const v = req.body;
+    // Validaciones mínimas
+    if (!v || !v.fecha || !v.hora || !v.identificacion_cliente || !Array.isArray(v.productos) || v.productos.length === 0) {
+      return res.status(400).json({ error: 'Datos de venta incompletos' });
+    }
+
+    // Generar un código secuencial para la venta: V + número correlativo, total 10 caracteres
+    const getNextVentaNumber = async () => {
+      return await new Promise((resolve, reject) => {
+        db.get('SELECT COUNT(*) as total FROM VENTA', [], (err, row) => {
+          if (err) reject(err);
+          else resolve(row.total + 1); // Siguiente número
+        });
+      });
+    };
+    const nextVentaNum = await getNextVentaNumber();
+    // Formato: V + ceros + número, total 10 caracteres
+    const codigoVenta = 'V' + String(nextVentaNum).padStart(9, '0');
+
+    // Buscar cliente seleccionado
+    const cliente = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM CLIENTE WHERE cli_identificacion = ?', [v.identificacion_cliente], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+    if (!cliente) return res.status(400).json({ error: 'Cliente no encontrado' });
+
+    // Buscar si es natural o jurídico
+    const clienteNatural = await new Promise((resolve) => {
+      db.get('SELECT * FROM CLIENTE_NATURAL WHERE cli_identificacion = ?', [v.identificacion_cliente], (err, row) => {
+        resolve(row);
+      });
+    });
+    const clienteJuridico = await new Promise((resolve) => {
+      db.get('SELECT * FROM CLIENTE_JURIDICO WHERE cli_identificacion = ?', [v.identificacion_cliente], (err, row) => {
+        resolve(row);
+      });
+    });
+
+    // Calcular subtotal y total
+    let subtotal = 0, total = 0;
+    v.productos.forEach(p => {
+      const precio = parseFloat(p.precio_unitario) || 0;
+      const iva = parseFloat(p.IVA_unitario) || 0;
+      const cantidad = parseFloat(p.cantidad) || 0;
+      subtotal += precio * cantidad;
+      total += (precio + iva) * cantidad;
+    });
+
+    // Insertar la venta
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO VENTA (
+          ven_codigo, ven_fecha, ven_hora, ven_subtotal, ven_total,
+          ven_identificacion_cliente, ven_tipo_identificacion_cliente,
+          ven_nombre_cliente, ven_apellido_cliente, ven_razon_social_cliente,
+          ven_direccion_cliente, ven_numero_telefonico_cliente, ven_ciudad_cliente, ven_correo_electronico_cliente,
+          ven_nombre_o_razon_social_vendedor, ven_NIT_vendedor, ven_direccion_vendedor, ven_numero_de_contacto_vendedor, ven_municipio_vendedor, ven_responsabilidad_fiscal_vendedor
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          codigoVenta,
+          v.fecha,
+          v.hora,
+          subtotal,
+          total,
+          v.identificacion_cliente,
+          clienteNatural ? (clienteNatural.cli_tipo_de_documento || 'CC') : 'NIT',
+          clienteNatural ? clienteNatural.cli_nombre : null,
+          clienteNatural ? clienteNatural.cli_apellido : null,
+          clienteJuridico ? clienteJuridico.cli_razon_social : null,
+          cliente.cli_direccion,
+          cliente.cli_numero_telefonico,
+          cliente.cli_ciudad,
+          cliente.cli_correo_electronico,
+          v.nombre_o_razon_social_vendedor,
+          v.NIT_vendedor,
+          v.direccion_vendedor,
+          v.numero_de_contacto_vendedor,
+          v.municipio_vendedor,
+          v.responsabilidad_fiscal_vendedor
+        ],
+        function (err) {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+
+    // Insertar los productos vendidos (detalle)
+    const stmtDet = db.prepare('INSERT INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    v.productos.forEach(p => {
+      const precio = parseFloat(p.precio_unitario) || 0;
+      const iva = parseFloat(p.IVA_unitario) || 0;
+      const cantidad = parseFloat(p.cantidad) || 0;
+      const submonto = precio * cantidad;
+      const monto = (precio + iva) * cantidad;
+      stmtDet.run(
+        p.nombre,
+        cantidad,
+        precio,
+        iva,
+        submonto,
+        monto,
+        codigoVenta
+      );
+    });
+    stmtDet.finalize();
+
+    // Registrar movimientos de inventario (salida por venta)
+    // Buscar el tip_codigo para "Venta de productos"
+    const tipCodigoVenta = await new Promise((resolve, reject) => {
+      db.get("SELECT tip_codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_tipo_flujo = 'Salida' AND tip_nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.tip_codigo : null);
+      });
+    });
+    if (!tipCodigoVenta) {
+      return res.status(500).json({ error: 'No se encontró el tipo de movimiento para venta.' });
+    }
+    const fechaHoy = new Date().toISOString().slice(0, 10);
+    const stmtMov = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (mov_fecha, mov_cantidad, tip_codigo, pro_codigo) VALUES (?, ?, ?, ?)');
+    for (const p of v.productos) {
+      // Buscar el código del producto
+      const prod = await new Promise((resolve) => {
+        db.get('SELECT pro_codigo FROM PRODUCTO WHERE pro_nombre = ?', [p.nombre], (err, row) => {
+          resolve(row);
+        });
+      });
+      if (prod && prod.pro_codigo) {
+        stmtMov.run(fechaHoy, Number(p.cantidad), tipCodigoVenta, prod.pro_codigo);
+      }
+    }
+    stmtMov.finalize();
+    res.json({ ok: true, codigo: codigoVenta });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint para eliminar una venta y sus movimientos de inventario
+app.delete('/api/venta/:codigo', async (req, res) => {
+  const codigo = req.params.codigo;
+  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+  try {
+    // Eliminar movimientos de inventario asociados a la venta
+    // Primero obtener los productos de la venta
+    const productos = await new Promise((resolve, reject) => {
+      db.all('SELECT det_nombre_producto, det_cantidad FROM DETALLE_PRODUCTO_VENDIDO WHERE ven_codigo = ?', [codigo], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    // Buscar tip_codigo para "Venta de productos"
+    const tipCodigoVenta = await new Promise((resolve, reject) => {
+      db.get("SELECT tip_codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_tipo_flujo = 'Salida' AND tip_nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
+        if (err) reject(err);
+        else resolve(row ? row.tip_codigo : null);
+      });
+    });
+    if (tipCodigoVenta) {
+      for (const p of productos) {
+        // Buscar el código del producto
+        const prod = await new Promise((resolve) => {
+          db.get('SELECT pro_codigo FROM PRODUCTO WHERE pro_nombre = ?', [p.det_nombre_producto], (err, row) => {
+            resolve(row);
+          });
+        });
+        if (prod && prod.pro_codigo) {
+          // Eliminar movimientos de inventario de salida por venta para este producto y venta
+          await new Promise((resolve, reject) => {
+            db.run('DELETE FROM MOVIMIENTO_INVENTARIO WHERE pro_codigo = ? AND tip_codigo = ? AND mov_cantidad = ? AND mov_fecha = (SELECT ven_fecha FROM VENTA WHERE ven_codigo = ?)', [prod.pro_codigo, tipCodigoVenta, p.det_cantidad, codigo], function(err) {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+        }
+      }
+    }
+    // Eliminar detalle de productos vendidos
+    await new Promise((resolve, reject) => {
+      db.run('DELETE FROM DETALLE_PRODUCTO_VENDIDO WHERE ven_codigo = ?', [codigo], function(err) {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    // Eliminar la venta
+    await new Promise((resolve, reject) => {
+      db.run('DELETE FROM VENTA WHERE ven_codigo = ?', [codigo], function(err) {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Endpoint para eliminar un producto

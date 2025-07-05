@@ -1,6 +1,7 @@
 // Espera a que el DOM esté listo
 window.addEventListener('DOMContentLoaded', async () => {
     const ventasLista = document.getElementById('ventas-lista');
+    const btnNuevaVenta = document.getElementById('nueva-venta');
 
     // Función para crear una fila de la tabla
     function crearFilaVenta(venta) {
@@ -14,7 +15,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             <td class="py-2 px-4">${venta.total}</td>
             <td class="py-2 px-4 text-center">
                 <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-2" title="Ver venta" onclick="window.open('venta.html?codigo=${venta.numero}', '_blank')">👁️</button>
-                <button class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded mr-2" title="Editar venta">✏️</button>
                 <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded" title="Eliminar venta">🗑️</button>
             </td>
         `;

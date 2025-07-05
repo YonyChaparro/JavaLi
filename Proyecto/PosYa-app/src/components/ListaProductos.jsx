@@ -68,14 +68,16 @@ const ListaProductos = ({
 
   const productosFiltrados = productos.filter(producto => {
     const termino = busqueda.toLowerCase();
+    // Se añade optional chaining (?.) y un valor por defecto ('') para evitar errores
+    // si el producto o sus propiedades (nombre, codigo) son nulos o indefinidos.
     return (
-      producto.nombre.toLowerCase().includes(termino) ||
-      producto.codigo.toLowerCase().includes(termino)
+      (producto?.nombre || '').toLowerCase().includes(termino) ||
+      (producto?.codigo || '').toLowerCase().includes(termino)
     );
   });
 
   const productosOrdenados = [...productosFiltrados].sort((a, b) => 
-    a.nombre.localeCompare(b.nombre)
+    (a?.nombre || '').localeCompare(b?.nombre || '')
   );
 
   const indiceUltimoProducto = paginaActual * productosPorPagina;

@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import HistorialVentas from '../components/HistorialVentas';
+import EdicionVendedor from '../components/EdicionVendedor';
+import Inventario from '../components/Inventario';
+
 import ListaClientes from '../components/ListaClientes';
 import TipoMovimiento from '../components/TipoMovimiento';
 
@@ -18,8 +22,19 @@ export default function HomeMenu() {
         window.open('/reportes.html', '_blank');
     };
 
+    const [mostrarHistorialVentas, setMostrarHistorialVentas] = useState(false);
     const abrirHistorialVentas = () => {
-        window.open('/historial_ventas.html', '_blank');
+        setMostrarHistorialVentas(true);
+    };
+
+    const [mostrarEdicionVendedor, setMostrarEdicionVendedor] = useState(false);
+    const abrirEdicionVendedor = () => {
+        setMostrarEdicionVendedor(true);
+    };
+
+    const [mostrarInventario, setMostrarInventario] = useState(false);
+    const abrirInventario = () => {
+        setMostrarInventario(true);
     };
 
     const abrirTiposDeMovimiento = () => {
@@ -64,9 +79,13 @@ export default function HomeMenu() {
                     <div className="h-44 bg-white rounded-[36px] shadow-md p-4 flex items-center justify-center">
                         <img src="/icons/logo.png" alt="Logo POS" className="h-full w-full object-contain" />
                     </div>
-                    <div onClick={abrirHistorialVentas} className="flex-1 flex flex-col bg-white rounded-[36px] shadow-md p-4 relative group">
-                        <div className="absolute top-4 right-4 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <PlusIcon />
+
+                    {/* Cuadro del Botón Pagar: 2/3 de altura */}
+                    <div onClick={abrirHistorialVentas} className="h-[66.66%] flex flex-col items-center justify-center bg-white rounded-[36px] shadow-md p-4 relative transition-transform duration-300 hover:scale-105">
+                        <div className="absolute top-3 right-3 h-6 w-6 bg-blue-100 rounded-full p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" viewBox="0.5 0.5 31.0 31.0" style={{ fill: 'rgb(6, 50, 125)' }}>
+                                <path d="M16,0.5C7.45001,0.5,0.5,7.45001,0.5,16S7.45001,31.5,16,31.5S31.5,24.54999,31.5,16S24.54999,0.5,16,0.5z M24.71002,17.5 H17.5v7.20996c0,0.82001-0.66998,1.5-1.5,1.5s-1.5-0.67999-1.5-1.5V17.5H7.28998c-0.82001,0-1.5-0.67004-1.5-1.5 c0-0.83002,0.67999-1.5,1.5-1.5H14.5V7.28998c0-0.82001,0.66998-1.5,1.5-1.5s1.5,0.67999,1.5,1.5V14.5h7.21002 c0.82001,0,1.5,0.66998,1.5,1.5C26.21002,16.82996,25.53003,17.5,24.71002,17.5z" />
+                            </svg>
                         </div>
                         <div className="flex-1 flex flex-col items-center justify-center gap-4">
                             <div className="h-48 w-full flex items-center justify-center">
@@ -80,28 +99,28 @@ export default function HomeMenu() {
                 {/* Botones del menú principal */}
                 {[
                     { label: 'Clientes', icon: '/icons/clientes.png', onClick: () => setMostrarListaClientes(true) },
-                    { label: 'Inventario', icon: '/icons/inventario.png', onClick: () => setMostrarTipoMovimiento(true) },
-                    { label: 'Gestión productos', icon: '/icons/pendiente.webp', onClick: () => setMostrarListaProductos(true) },
-                    { label: 'Vendedor', icon: '/icons/vendedor.webp' },
-                    { label: 'Factura ordinaria', icon: '/icons/factura-ordinaria.png' },
-                    { label: 'Reportes', icon: '/icons/reportes.png', onClick: abrirReporte }
-                ].map((item, index) => (
-                    <div 
-                        key={index} 
-                        onClick={item.onClick}
-                        className="bg-white rounded-[36px] shadow-md p-4 relative group flex flex-col"
-                    >
-                        <div className="absolute top-4 right-4 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <PlusIcon />
-                        </div>
-                        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                            <div className="h-48 w-full flex items-center justify-center">
-                                <img src={item.icon} alt={item.label} className="h-full w-auto object-contain" />
+                    { label: 'Inventario', icon: '/icons/inventario.png', onClick: abrirInventario },
+                    { label: 'Factura ordinaria', icon: '/icons/factura-ordinaria.png', onClick: abrirTiposDeMovimiento },
+                    { label: 'Reportes', icon: '/icons/reportes.png', onClick: abrirReporte },
+                    { label: 'Vendedor', icon: '/icons/vendedor.webp', onClick: abrirEdicionVendedor },
+                    { label: 'Productos', icon: '/icons/pendiente.webp', onClick: () => setMostrarListaProductos(true) },
+                ].map((item, i) => {
+
+                    return (
+                    
+                        <div key={i} onClick={item.onClick} className="bg-white rounded-[36px] flex flex-col items-center justify-between p-4 relative transition-transform duration-300 hover:scale-105">
+                            <div className="absolute top-3 right-3 h-6 w-6 bg-blue-100 rounded-full p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" viewBox="0.5 0.5 31.0 31.0" style={{ fill: 'rgb(6, 50, 125)' }}>
+                                    <path d="M16,0.5C7.45001,0.5,0.5,7.45001,0.5,16S7.45001,31.5,16,31.5S31.5,24.54999,31.5,16S24.54999,0.5,16,0.5z M24.71002,17.5 H17.5v7.20996c0,0.82001-0.66998,1.5-1.5,1.5s-1.5-0.67999-1.5-1.5V17.5H7.28998c-0.82001,0-1.5-0.67004-1.5-1.5 c0-0.83002,0.67999-1.5,1.5-1.5H14.5V7.28998c0-0.82001,0.66998-1.5,1.5-1.5s1.5,0.67999,1.5,1.5V14.5h7.21002 c0.82001,0,1.5,0.66998,1.5,1.5C26.21002,16.82996,25.53003,17.5,24.71002,17.5z" />
+                                </svg>
                             </div>
                             <p className="text-2xl font-bold text-center">{item.label}</p>
                         </div>
-                    </div>
-                ))}
+
+                    );
+
+                })}
+
             </div>
 
             {/* Modales lista de clientes*/}
@@ -147,6 +166,34 @@ export default function HomeMenu() {
                     />
                 </div>
             )}
+
+            {/* Modal historial de ventas */}
+            {mostrarHistorialVentas && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-auto relative">
+                        <HistorialVentas onClose={() => setMostrarHistorialVentas(false)} />
+                    </div>
+                </div>
+            )}
+
+            {/* Modal inventario */}
+            {mostrarInventario && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-auto relative">
+                        <Inventario onClose={() => setMostrarInventario(false)} />
+                    </div>
+                </div>
+            )}
+
+            {/* Modal edición de vendedor */}
+            {mostrarEdicionVendedor && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-auto relative">
+                        <EdicionVendedor onClose={() => setMostrarEdicionVendedor(false)} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
