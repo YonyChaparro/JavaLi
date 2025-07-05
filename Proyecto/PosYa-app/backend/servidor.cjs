@@ -72,14 +72,6 @@ app.post('/api/movimientos-inventario', express.json(), (req, res) => {
 });
 
 
-// Endpoint para obtener todos los tipos de movimiento de inventario
-app.get('/api/tipos-movimiento', (req, res) => {
-  db.all('SELECT tip_codigo, tip_nombre FROM TIPO_MOVIMIENTO_INVENTARIO ORDER BY tip_nombre', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
 // Obtener el único vendedor (si existe)
 app.get('/api/vendedor', (req, res) => {
   db.get('SELECT * FROM VENDEDOR LIMIT 1', [], (err, row) => {
@@ -148,69 +140,6 @@ app.get('/api/reportes', (req, res) => {
       res.json(rows);
     }
   });
-});
-
-// Endpoint: insertar datos de prueba
-app.get('/api/insertar-datos-prueba', (req, res) => {
-
-  // Insertar cliente de prueba (natural)
-  const clienteNatural = [
-    "1234567890", // cli_identificacion
-    "Calle Falsa 123", // cli_direccion
-    "cliente@correo.com", // cli_correo_electronico
-    "Bogotá", // cli_ciudad
-    "3001234567" // cli_numero_telefonico
-  ];
-  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', clienteNatural);
-  db.run('INSERT OR IGNORE INTO CLIENTE_NATURAL (cli_identificacion, cli_tipo_de_documento, cli_nombre, cli_apellido) VALUES (?, ?, ?, ?)', [
-    "1234567890", // cli_identificacion
-    "CC", // cli_tipo_de_documento
-    "Juan Carlos", // cli_nombre
-    "Pérez Gómez" // cli_apellido
-  ]);
-
-  // Insertar cliente de prueba (jurídico)
-  const clienteJuridico = [
-    "900123456", // cli_identificacion (NIT)
-    "Avenida Siempre Viva 742", // cli_direccion
-    "empresa@correo.com", // cli_correo_electronico
-    "Medellín", // cli_ciudad
-    "6041234567" // cli_numero_telefonico
-  ];
-  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', clienteJuridico);
-  db.run('INSERT OR IGNORE INTO CLIENTE_JURIDICO (cli_identificacion, cli_razon_social) VALUES (?, ?)', [
-    "900123456", // cli_identificacion
-    "Soluciones Empresariales S.A.S." // cli_razon_social
-  ]);
-
-
-
-  // Insertar productos
-  const productos = [
-    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", "IVA1"],
-    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", "IVA2"]
-  ];
-  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, tip_codigo_iva) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  productos.forEach(p => stmtProd.run(p));
-  stmtProd.finalize();
-
-  // Insertar venta
-  const ventas = [
-    ["V002", "2025-06-21", "10:49", 181644040, 184550344, "C001", "CC", "Juan", "Pérez", null, "Calle 1", "555-1234", "Bogotá", "juan@mail.com", "Pedro S.A.", "V001", "Calle 2", "555-5678", "Bogotá", "Responsable"]
-  ];
-  const stmtVenta = db.prepare('INSERT OR IGNORE INTO VENTA (ven_codigo, ven_fecha, ven_hora, ven_subtotal, ven_total, ven_identificacion_cliente, ven_tipo_identificacion_cliente, ven_nombre_cliente, ven_apellido_cliente, ven_razon_social_cliente, ven_direccion_cliente, ven_numero_telefonico_cliente, ven_ciudad_cliente, ven_correo_electronico_cliente, ven_nombre_o_razon_social_vendedor, ven_NIT_vendedor, ven_direccion_vendedor, ven_numero_de_contacto_vendedor, ven_municipio_vendedor, ven_responsabilidad_fiscal_vendedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  ventas.forEach(v => stmtVenta.run(v));
-  stmtVenta.finalize();
-
-  // Insertar detalle
-  const detalles = [
-    ["Argolla analizadora", 23, 90000, 900, 9000, 818272, 289892, "V002"]
-  ];
-  const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-  detalles.forEach(d => stmtDet.run(d));
-  stmtDet.finalize();
-
-  res.json({ ok: true });
 });
 
 // Endpoint para obtener productos vendidos
