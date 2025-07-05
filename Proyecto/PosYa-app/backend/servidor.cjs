@@ -609,6 +609,159 @@ app.delete('/api/clientes/:id', (req, res) => {
   });
 });
 
+// Endpoint para crear productos
+app.post('/api/productos', (req, res) => {
+  const {
+    codigo,
+    nombre,
+    costoUnitario,
+    precioUnitario,
+    descripcion,
+    exentoIVA,
+    tipoIVA
+  } = req.body;
+
+  // Validaciones
+  if (!nombre || isNaN(costoUnitario) || isNaN(precioUnitario)) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios o son inválidos' });
+  }
+
+  // Calcular tasa de IVA
+  const tasaIVA = exentoIVA ? 0 : (parseFloat(tipoIVA) || 0.19);
+  
+  console.log("Tasa de IVA calculada:", tasaIVA);
+
+
+  db.run(
+    `INSERT INTO PRODUCTO (
+      pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, 
+      pro_descripcion, pro_estado, pro_tasa_IVA
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      codigo,
+      nombre,
+      costoUnitario,
+      precioUnitario,
+      descripcion || '',
+      'activo',
+      tasaIVA
+    ],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.status(201).json({
+        codigo,
+        nombre,
+        costoUnitario,
+        precioUnitario,
+        descripcion,
+        estado: 'activo',
+        exentoIVA,
+        tipoIVA: tasaIVA
+      });
+    }
+  );
+});
+
+// Endpoint para obtener todos los productos
+app.get('/api/productos', (req, res) => {
+  const query = `
+    SELECT 
+      p.pro_codigo AS codigo,
+      p.pro_nombre AS nombre,
+      p.pro_precio AS precioUnitario,
+      p.pro_costo_unitario AS costoUnitario,
+      p.pro_descripcion AS descripcion,
+      p.pro_tasa_IVA AS tipoIVA,
+      p.pro_estado AS estado,
+      CASE 
+        WHEN pb.pro_codigo IS NOT NULL THEN 'bien'
+        WHEN ps.pro_codigo IS NOT NULL THEN 'servicio'
+        ELSE 'desconocido'
+      END AS tipoProducto
+    FROM PRODUCTO p
+    LEFT JOIN PRODUCTO_BIEN pb ON p.pro_codigo = pb.pro_codigo
+    LEFT JOIN PRODUCTO_SERVICIO ps ON p.pro_codigo = ps.pro_codigo
+    ORDER BY p.pro_nombre
+  `;
+  
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Endpoint para eliminar un producto
+app.delete('/api/productos/:codigo', (req, res) => {
+  const { codigo } = req.params;
+  
+  db.serialize(() => {
+    // Eliminar de las tablas específicas primero
+    db.run('DELETE FROM PRODUCTO_BIEN WHERE pro_codigo = ?', [codigo]);
+    db.run('DELETE FROM PRODUCTO_SERVICIO WHERE pro_codigo = ?', [codigo]);
+    
+    // Luego eliminar de la tabla principal
+    db.run('DELETE FROM PRODUCTO WHERE pro_codigo = ?', [codigo], function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Producto no encontrado' });
+      }
+      res.json({ ok: true });
+    });
+  });
+});
+
+// Endpoint para actualizar un producto
+app.put('/api/productos/:codigo', (req, res) => {
+  const codigo = req.params.codigo;
+  const {
+    nombre,
+    costoUnitario,
+    precioUnitario,
+    descripcion,
+    estado = 'activo',
+    tipoIVA,
+    exentoIVA
+  } = req.body;
+
+  if (!codigo || !nombre || isNaN(costoUnitario) || isNaN(precioUnitario)) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios o datos inválidos' });
+  }
+
+  const tasaIVA = exentoIVA ? 0 : (parseFloat(tipoIVA) || 0.19);
+
+  db.run(
+    `UPDATE PRODUCTO
+     SET pro_nombre = ?, pro_costo_unitario = ?, pro_precio = ?, pro_descripcion = ?, pro_estado = ?, pro_tasa_IVA = ?
+     WHERE pro_codigo = ?`,
+    [nombre, costoUnitario, precioUnitario, descripcion || '', estado, tasaIVA, codigo],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Producto no encontrado' });
+      }
+      res.json({
+        codigo,
+        nombre,
+        costoUnitario,
+        precioUnitario,
+        descripcion,
+        estado,
+        tipoIVA: tasaIVA,
+        exentoIVA
+      });
+    }
+  );
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
+
