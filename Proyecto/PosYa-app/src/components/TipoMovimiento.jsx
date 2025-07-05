@@ -3,6 +3,8 @@ import { FiEdit2, FiTrash2, FiChevronLeft } from 'react-icons/fi';
 import EditarTipoMovimiento from './EditarTipoMovimiento';
 
 function TipoMovimientoRow({ row, onEdit, onDelete }) {
+  const isDefault = row.tip_codigo <= 4;
+
   return (
     <tr>
       <td className="py-2 px-4 border-b">{row.tip_codigo}</td>
@@ -18,8 +20,9 @@ function TipoMovimientoRow({ row, onEdit, onDelete }) {
         </button>
         <button
           onClick={e => { e.stopPropagation(); onDelete(row); }}
-          className="text-red-600 hover:text-red-900"
-          title="Eliminar tipo de movimiento"
+          className={`text-red-600 ${isDefault ? 'opacity-50 cursor-not-allowed' : 'hover:text-red-900'}`}
+          title={isDefault ? "Este tipo de movimiento no se puede eliminar" : "Eliminar tipo de movimiento"}
+          disabled={isDefault}
         >
           <FiTrash2 size={16} />
         </button>
@@ -167,7 +170,13 @@ export default function TipoMovimiento({ onBack }) {
     try {
       const resp = await fetch('http://localhost:3000/api/tipos-movimiento');
       const data = await resp.json();
-      setTipos(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        // Ordenar por código de forma ascendente
+        data.sort((a, b) => a.tip_codigo - b.tip_codigo);
+        setTipos(data);
+      } else {
+        setTipos([]);
+      }
     } catch (err) {
       setError('Error al cargar los datos');
     } finally {

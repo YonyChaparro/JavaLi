@@ -2,25 +2,55 @@ import React, { useEffect, useState } from 'react';
 import VisualizacionVenta from './VisualizacionVenta';
 import RegistrarVenta from './RegistrarVenta';
 
+function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 'Confirmar', cancelText = 'Cancelar' }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-lg shadow-md p-6 max-w-sm w-full">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
+        <p className="mb-6 text-gray-700">{message}</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const HistorialVentas = ({ onClose }) => {
   const [ventas, setVentas] = useState([]);
   const [error, setError] = useState(null);
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
   const [registrandoVenta, setRegistrandoVenta] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
-  // Eliminar venta
-  const handleEliminarVenta = async (codigo) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar esta venta? Esta acción no se puede deshacer.')) return;
+  const handleShowConfirmDelete = (venta) => {
+    setItemToDelete(venta);
+    setShowConfirmDelete(true);
+  };
+
+  const confirmDeleteVenta = async () => {
+    if (!itemToDelete) return;
     try {
-      const resp = await fetch(`http://localhost:3000/api/venta/${encodeURIComponent(codigo)}`, { method: 'DELETE' });
+      const resp = await fetch(`http://localhost:3000/api/venta/${encodeURIComponent(itemToDelete.numero)}`, { method: 'DELETE' });
       if (!resp.ok) throw new Error('No se pudo eliminar la venta');
-      // Refrescar ventas
-      const response = await fetch('http://localhost:3000/api/historial_ventas');
-      if (!response.ok) throw new Error('Error al obtener ventas');
-      const data = await response.json();
-      setVentas(data);
+      setVentas(ventas.filter(v => v.numero !== itemToDelete.numero));
     } catch (err) {
       setError('No se pudo eliminar la venta.');
+    } finally {
+      setShowConfirmDelete(false);
+      setItemToDelete(null);
     }
   };
 
@@ -110,7 +140,7 @@ const HistorialVentas = ({ onClose }) => {
                         <td className="py-2 px-4">{venta.total}</td>
                         <td className="py-2 px-4 text-center">
                         <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-2" title="Ver venta" onClick={() => setVentaSeleccionada(venta.numero)}>👁️</button>
-                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded" title="Eliminar venta" onClick={() => handleEliminarVenta(venta.numero)}>🗑️</button>
+                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded" title="Eliminar venta" onClick={() => handleShowConfirmDelete(venta)}>🗑️</button>
                         </td>
                       </tr>
                     );
@@ -128,6 +158,19 @@ const HistorialVentas = ({ onClose }) => {
             <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
               <VisualizacionVenta codigo={ventaSeleccionada} onClose={() => setVentaSeleccionada(null)} />
             </div>
+          )}
+          {showConfirmDelete && itemToDelete && (
+            <ConfirmationModal
+              title="Confirmar Eliminación"
+              message={`¿Estás seguro de que deseas eliminar la venta N° ${itemToDelete.numero}? Esta acción no se puede deshacer.`}
+              onConfirm={confirmDeleteVenta}
+              onCancel={() => {
+                setShowConfirmDelete(false);
+                setItemToDelete(null);
+              }}
+              confirmText="Sí, eliminar"
+              cancelText="No, cancelar"
+            />
           )}
         </>
       )}

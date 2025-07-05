@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import HistorialVentas from '../components/HistorialVentas';
 import EdicionVendedor from '../components/EdicionVendedor';
 import Inventario from '../components/Inventario';
+import Reportes from '../components/Reportes';
 
 import ListaClientes from '../components/ListaClientes';
 import TipoMovimiento from '../components/TipoMovimiento';
@@ -17,10 +18,7 @@ export default function HomeMenu() {
     const [mostrarListaProductos, setMostrarListaProductos] = useState(false);
     const [mostrarFormularioProducto, setMostrarFormularioProducto] = useState(false);
     const [productoEditado, setProductoEditado] = useState(null);
-
-    const abrirReporte = () => {
-        window.open('/reportes.html', '_blank');
-    };
+    const [mostrarReportes, setMostrarReportes] = useState(false);
 
     const [mostrarHistorialVentas, setMostrarHistorialVentas] = useState(false);
     const abrirHistorialVentas = () => {
@@ -101,20 +99,23 @@ export default function HomeMenu() {
                     { label: 'Clientes', icon: '/icons/clientes.png', onClick: () => setMostrarListaClientes(true) },
                     { label: 'Inventario', icon: '/icons/inventario.png', onClick: abrirInventario },
                     { label: 'Factura ordinaria', icon: '/icons/factura-ordinaria.png', onClick: abrirTiposDeMovimiento },
-                    { label: 'Reportes', icon: '/icons/reportes.png', onClick: abrirReporte },
+                    { label: 'Reportes', icon: '/icons/reportes.png', onClick: () => setMostrarReportes(true) },
                     { label: 'Vendedor', icon: '/icons/vendedor.webp', onClick: abrirEdicionVendedor },
                     { label: 'Productos', icon: '/icons/pendiente.webp', onClick: () => setMostrarListaProductos(true) },
                 ].map((item, i) => {
 
                     return (
                     
-                        <div key={i} onClick={item.onClick} className="bg-white rounded-[36px] flex flex-col items-center justify-between p-4 relative transition-transform duration-300 hover:scale-105">
+                        <div key={i} onClick={item.onClick} className="bg-white rounded-[36px] flex flex-col items-center justify-center p-4 relative transition-transform duration-300 hover:scale-105">
                             <div className="absolute top-3 right-3 h-6 w-6 bg-blue-100 rounded-full p-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" viewBox="0.5 0.5 31.0 31.0" style={{ fill: 'rgb(6, 50, 125)' }}>
                                     <path d="M16,0.5C7.45001,0.5,0.5,7.45001,0.5,16S7.45001,31.5,16,31.5S31.5,24.54999,31.5,16S24.54999,0.5,16,0.5z M24.71002,17.5 H17.5v7.20996c0,0.82001-0.66998,1.5-1.5,1.5s-1.5-0.67999-1.5-1.5V17.5H7.28998c-0.82001,0-1.5-0.67004-1.5-1.5 c0-0.83002,0.67999-1.5,1.5-1.5H14.5V7.28998c0-0.82001,0.66998-1.5,1.5-1.5s1.5,0.67999,1.5,1.5V14.5h7.21002 c0.82001,0,1.5,0.66998,1.5,1.5C26.21002,16.82996,25.53003,17.5,24.71002,17.5z" />
                                 </svg>
                             </div>
-                            <p className="text-2xl font-bold text-center">{item.label}</p>
+                            <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                                <img src={item.icon} alt={item.label} className="h-24 w-auto object-contain" />
+                                <p className="text-2xl font-bold text-center">{item.label}</p>
+                            </div>
                         </div>
 
                     );
@@ -122,6 +123,13 @@ export default function HomeMenu() {
                 })}
 
             </div>
+
+            {/* Modal de Reportes */}
+            {mostrarReportes && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <Reportes onClose={() => setMostrarReportes(false)} />
+                </div>
+            )}
 
             {/* Modales lista de clientes*/}
             {mostrarListaClientes && (
@@ -196,4 +204,3 @@ export default function HomeMenu() {
         </div>
     );
 }
-

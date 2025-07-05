@@ -174,7 +174,7 @@ const VisualizacionVenta = ({ codigo, onClose }) => {
         <p><strong>Dirección Cliente:</strong> {venta.direccion_cliente || ''}</p>
         <p><strong>Correo Cliente:</strong> {venta.correo_cliente || ''}</p>
         <p><strong>Vendedor:</strong> {venta.vendedor || ''}</p>
-        <button onClick={() => generarPDFVenta(venta, productos)} className="mt-4 mb-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold">Descargar PDF de la venta</button>
+        <button onClick={() => generarPDFVenta(venta, productos)} className="mt-4 mb-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold">Descargar PDF</button>
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-4">Productos Vendidos</h2>

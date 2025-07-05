@@ -1,6 +1,31 @@
 import { useState, useEffect } from 'react';
 import { FiEdit2, FiTrash2, FiPlus, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
+function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 'Confirmar', cancelText = 'Cancelar' }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-lg shadow-md p-6 max-w-sm w-full">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
+        <p className="mb-6 text-gray-700">{message}</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const ListaProductos = ({ 
   onAddProduct,
   onEditProduct,
@@ -14,6 +39,8 @@ const ListaProductos = ({
   const productosPorPagina = 25;
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   // Cargar productos desde la API
   useEffect(() => {
@@ -39,30 +66,36 @@ const ListaProductos = ({
     cargarProductos();
   }, []);
 
-  // Manejar eliminación de producto
-  const handleEliminarProducto = async (productoCodigo) => {
-    if (window.confirm('¿Está seguro que desea eliminar este producto?')) {
-      try {
-        const response = await fetch(`/api/productos/${productoCodigo}`, {
-          method: 'DELETE'
-        });
+  const handleShowConfirmDelete = (producto) => {
+    setItemToDelete(producto);
+    setShowConfirmDelete(true);
+  };
 
-        if (!response.ok) {
-          throw new Error('Error al eliminar el producto');
-        }
+  const confirmDeleteProduct = async () => {
+    if (!itemToDelete) return;
+    try {
+      const response = await fetch(`/api/productos/${itemToDelete.codigo}`, {
+        method: 'DELETE'
+      });
 
-        setProductos(productos.filter(p => p.codigo !== productoCodigo));
-        if (productoSeleccionado?.codigo === productoCodigo) {
-          setProductoSeleccionado(null);
-        }
-
-        if (onDeleteProduct) {
-          onDeleteProduct(productoCodigo);
-        }
-      } catch (err) {
-        console.error('Error al eliminar:', err);
-        setError(err.message);
+      if (!response.ok) {
+        throw new Error('Error al eliminar el producto');
       }
+
+      setProductos(productos.filter(p => p.codigo !== itemToDelete.codigo));
+      if (productoSeleccionado?.codigo === itemToDelete.codigo) {
+        setProductoSeleccionado(null);
+      }
+
+      if (onDeleteProduct) {
+        onDeleteProduct(itemToDelete.codigo);
+      }
+    } catch (err) {
+      console.error('Error al eliminar:', err);
+      setError(err.message);
+    } finally {
+      setShowConfirmDelete(false);
+      setItemToDelete(null);
     }
   };
 
@@ -183,7 +216,7 @@ const ListaProductos = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleEliminarProducto(producto.codigo);
+                      handleShowConfirmDelete(producto);
                     }}
                     className="text-red-600 hover:text-red-900"
                     title="Eliminar producto"
@@ -302,8 +335,7 @@ const ListaProductos = ({
                 <button
                   type="button"
                   onClick={() => {
-                    handleEliminarProducto(productoSeleccionado.codigo);
-                    setProductoSeleccionado(null);
+                    handleShowConfirmDelete(productoSeleccionado);
                   }}
                   className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
                 >
@@ -314,6 +346,20 @@ const ListaProductos = ({
             </div>
           </div>
         </div>
+      )}
+
+      {showConfirmDelete && itemToDelete && (
+        <ConfirmationModal
+          title="Confirmar Eliminación"
+          message={`¿Estás seguro de que deseas eliminar el producto "${itemToDelete.nombre}"? Esta acción no se puede deshacer.`}
+          onConfirm={confirmDeleteProduct}
+          onCancel={() => {
+            setShowConfirmDelete(false);
+            setItemToDelete(null);
+          }}
+          confirmText="Sí, eliminar"
+          cancelText="No, cancelar"
+        />
       )}
     </div>
   );

@@ -122,8 +122,9 @@ app.get('/api/reportes', (req, res) => {
       SUM(dpv.det_monto) AS ingresos,
       SUM(dpv.det_cantidad * dpv.det_costo_unitario) AS costos,
       SUM(dpv.det_monto - (dpv.det_cantidad * dpv.det_costo_unitario)) AS utilidades,
-      SUM(dpv.det_IVA_unitario) AS iva
+      SUM(dpv.det_IVA_unitario * dpv.det_cantidad) AS iva
     FROM DETALLE_PRODUCTO_VENDIDO dpv
+    JOIN VENTA v ON dpv.ven_codigo = v.ven_codigo
     WHERE 1=1`;
 
   const params = [];
@@ -894,23 +895,32 @@ app.post('/api/venta', express.json(), async (req, res) => {
     });
 
     // Insertar los productos vendidos (detalle)
-    const stmtDet = db.prepare('INSERT INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    v.productos.forEach(p => {
+    const stmtDet = db.prepare('INSERT INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    for (const p of v.productos) {
+      // Para asegurar que el costo es el correcto, lo traemos de la BD
+      const prodInfo = await new Promise((resolve) => {
+        db.get('SELECT pro_costo_unitario FROM PRODUCTO WHERE pro_nombre = ?', [p.nombre], (err, row) => {
+          resolve(row); // Resuelve con la fila o undefined si no se encuentra
+        });
+      });
+
       const precio = parseFloat(p.precio_unitario) || 0;
       const iva = parseFloat(p.IVA_unitario) || 0;
       const cantidad = parseFloat(p.cantidad) || 0;
+      const costo = prodInfo ? (parseFloat(prodInfo.pro_costo_unitario) || 0) : 0;
       const submonto = precio * cantidad;
       const monto = (precio + iva) * cantidad;
       stmtDet.run(
         p.nombre,
         cantidad,
         precio,
+        costo,
         iva,
         submonto,
         monto,
         codigoVenta
       );
-    });
+    }
     stmtDet.finalize();
 
     // Registrar movimientos de inventario (salida por venta)
@@ -1073,4 +1083,3 @@ app.put('/api/productos/:codigo', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
-
