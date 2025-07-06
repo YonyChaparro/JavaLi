@@ -73,7 +73,7 @@ app.post('/api/movimientos-inventario', express.json(), (req, res) => {
 
 // Endpoint para obtener todos los movimientos de inventario con paginación
 app.get('/api/movimientos-inventario', (req, res) => {
-  const { page = 1, limit = 10, producto, tipoMovimiento, fechaInicio, fechaFin } = req.query;
+  const { page = 1, limit = 10, producto, tipoMovimiento, tipoFlujo, fechaInicio, fechaFin } = req.query;
   const offset = (page - 1) * limit;
 
   let query = `
@@ -103,6 +103,11 @@ app.get('/api/movimientos-inventario', (req, res) => {
   if (tipoMovimiento) {
     query += ' AND (m.tip_codigo = ? OR t.tip_nombre LIKE ?)';
     params.push(tipoMovimiento, `%${tipoMovimiento}%`);
+  }
+
+  if (tipoFlujo) {
+    query += ' AND t.tip_tipo_flujo = ?';
+    params.push(tipoFlujo);
   }
 
   if (fechaInicio && fechaFin) {
