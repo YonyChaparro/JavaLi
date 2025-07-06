@@ -296,7 +296,12 @@ const ListaClientes = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <FormularioCliente
             cliente={clienteSeleccionado}
-            onCancel={() => {
+            onClose = {() => {
+              setMostrarFormulario(false); 
+              setClienteSeleccionado(null);
+              onBack && onBack();
+            }}
+            onBack={() => {
               setMostrarFormulario(false);
               setClienteSeleccionado(null);
             }}
@@ -348,16 +353,23 @@ const ListaClientes = ({
         />
       )}
 
-      {mostrarDetalle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <DetalleCliente
-            cliente={clienteDetalle}
-            onClose={() => {
-              setMostrarDetalle(false);
-              setClienteDetalle(null);
-            }}
-          />
-        </div>
+      {mostrarDetalle && clienteDetalle && (
+        <DetalleCliente
+          cliente={clienteDetalle}
+          onClose={() => {
+            setMostrarDetalle(false);
+            setClienteDetalle(null);
+          }}
+          onEdit={(cliente) => {
+            setClienteSeleccionado(cliente);
+            setMostrarDetalle(false);
+            setMostrarFormulario(true);
+          }}
+          onDelete={(cliente) => {
+            setMostrarDetalle(false);
+            handleEliminarCliente(cliente);
+          }}
+        />
       )}
     </div>
   );

@@ -71,6 +71,143 @@ app.post('/api/movimientos-inventario', express.json(), (req, res) => {
   }
 });
 
+// Endpoint para obtener todos los movimientos de inventario con paginación
+app.get('/api/movimientos-inventario', (req, res) => {
+  const { page = 1, limit = 10, producto, tipoMovimiento, fechaInicio, fechaFin } = req.query;
+  const offset = (page - 1) * limit;
+
+  let query = `
+    SELECT 
+      m.mov_id,
+      m.mov_fecha,
+      m.mov_cantidad,
+      m.tip_codigo,
+      t.tip_nombre AS tipo_movimiento,
+      t.tip_tipo_flujo,
+      m.pro_codigo,
+      p.pro_nombre AS producto
+    FROM MOVIMIENTO_INVENTARIO m
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
+    JOIN PRODUCTO p ON m.pro_codigo = p.pro_codigo
+    WHERE 1=1
+  `;
+
+  const params = [];
+
+  // Filtros
+  if (producto) {
+    query += ' AND (m.pro_codigo = ? OR p.pro_nombre LIKE ?)';
+    params.push(producto, `%${producto}%`);
+  }
+
+  if (tipoMovimiento) {
+    query += ' AND (m.tip_codigo = ? OR t.tip_nombre LIKE ?)';
+    params.push(tipoMovimiento, `%${tipoMovimiento}%`);
+  }
+
+  if (fechaInicio && fechaFin) {
+    query += ' AND m.mov_fecha BETWEEN ? AND ?';
+    params.push(fechaInicio, fechaFin);
+  }
+
+  // Ordenación por fecha más reciente primero
+  query += ' ORDER BY m.mov_fecha DESC, m.mov_id DESC';
+
+  // Paginación
+  const queryCount = `SELECT COUNT(*) as total FROM (${query})`;
+  query += ` LIMIT ? OFFSET ?`;
+  params.push(Number(limit), Number(offset));
+
+  // Primero obtener el total de registros
+  db.get(queryCount, params.slice(0, -2), (errCount, countRow) => {
+    if (errCount) {
+      return res.status(500).json({ error: errCount.message });
+    }
+
+    // Luego obtener los datos paginados
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      res.json({
+        data: rows,
+        pagination: {
+          total: countRow.total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(countRow.total / limit)
+        }
+      });
+    });
+  });
+});
+
+// Endpoint para obtener el historial de movimientos de un producto específico
+app.get('/api/movimientos-inventario/producto/:pro_codigo', (req, res) => {
+  const { pro_codigo } = req.params;
+  const { limit = 50 } = req.query;
+
+  const query = `
+    SELECT 
+      m.mov_id,
+      m.mov_fecha,
+      m.mov_cantidad,
+      t.tip_nombre AS tipo_movimiento,
+      t.tip_tipo_flujo,
+      CASE 
+        WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad
+        WHEN t.tip_tipo_flujo = 'Salida' THEN -m.mov_cantidad
+        ELSE 0
+      END AS cantidad_con_signo
+    FROM MOVIMIENTO_INVENTARIO m
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
+    WHERE m.pro_codigo = ?
+    ORDER BY m.mov_fecha DESC, m.mov_id DESC
+    LIMIT ?
+  `;
+
+  db.all(query, [pro_codigo, Number(limit)], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Endpoint para obtener el resumen de movimientos por producto (para reportes)
+app.get('/api/movimientos-inventario/resumen', (req, res) => {
+  const { fechaInicio, fechaFin } = req.query;
+
+  let query = `
+    SELECT 
+      p.pro_codigo,
+      p.pro_nombre AS producto,
+      SUM(CASE WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad ELSE 0 END) AS entradas,
+      SUM(CASE WHEN t.tip_tipo_flujo = 'Salida' THEN m.mov_cantidad ELSE 0 END) AS salidas,
+      SUM(CASE WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad ELSE -m.mov_cantidad END) AS saldo
+    FROM MOVIMIENTO_INVENTARIO m
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
+    JOIN PRODUCTO p ON m.pro_codigo = p.pro_codigo
+    WHERE 1=1
+  `;
+
+  const params = [];
+
+  if (fechaInicio && fechaFin) {
+    query += ' AND m.mov_fecha BETWEEN ? AND ?';
+    params.push(fechaInicio, fechaFin);
+  }
+
+  query += ' GROUP BY p.pro_codigo, p.pro_nombre ORDER BY p.pro_nombre';
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
 
 // Obtener el único vendedor (si existe)
 app.get('/api/vendedor', (req, res) => {

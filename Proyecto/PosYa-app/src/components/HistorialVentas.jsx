@@ -95,7 +95,13 @@ const HistorialVentas = ({ onClose }) => {
       )}
       {registrandoVenta ? (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <RegistrarVenta onCancel={() => setRegistrandoVenta(false)} onVentaRegistrada={handleVentaRegistrada} />
+          <RegistrarVenta 
+            onBack={() => setRegistrandoVenta(false)} onVentaRegistrada={handleVentaRegistrada} 
+            onClose={() => {
+              setRegistrandoVenta(false);
+              if (onClose) onClose();
+            }}
+            />
         </div>
       ) : (
         <>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { FiChevronLeft } from 'react-icons/fi';
 
-const FormularioProducto = ({ productoEditado = null, onCancel, onSave }) => {
+const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave }) => {
   const [formData, setFormData] = useState({
     codigo: '',
     nombre: '',
@@ -117,6 +118,16 @@ const FormularioProducto = ({ productoEditado = null, onCancel, onSave }) => {
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800">{productoEditado ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+        {onClose && (
+          <button 
+            onClick={onClose} 
+            className="text-gray-500 hover:text-gray-700 transition"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {submitMessage.text && (
@@ -264,10 +275,10 @@ const FormularioProducto = ({ productoEditado = null, onCancel, onSave }) => {
         <div className="flex justify-end gap-2 pt-4">
           <button 
             type="button"
-            onClick={onCancel}
+            onClick={onBack}
             className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
           >
-            ← Volver
+            <FiChevronLeft className="inline mr-1" /> Volver
           </button>
           <button
             type="submit"

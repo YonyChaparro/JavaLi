@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import HistorialVentas from '../components/HistorialVentas';
 import EdicionVendedor from '../components/EdicionVendedor';
-import Inventario from '../components/Inventario';
+import ListaInventario from '../components/ListaInventario';
+import FormularioInventario from '../components/FormularioInventario';
 import Reportes from '../components/Reportes';
 
 import ListaClientes from '../components/ListaClientes';
@@ -64,10 +65,12 @@ export default function HomeMenu() {
         setMostrarEdicionVendedor(true);
     };
 
-    const [mostrarInventario, setMostrarInventario] = useState(false);
-    const abrirInventario = () => {
-        setMostrarInventario(true);
+    const [mostrarListaInventario, setMostrarListaInventario] = useState(false);
+    const abrirListaInventario = () => {
+        setMostrarListaInventario(true);
     };
+
+    const [mostrarFormularioInventario, setMostrarFormularioInventario] = useState(false);
 
     const abrirTiposDeMovimiento = () => {
         setMostrarTipoMovimiento(true);
@@ -122,7 +125,7 @@ export default function HomeMenu() {
                 {/* Botones del menú principal */}
                 {[
                     { name: 'clientes', label: 'Clientes', icon: '/icons/clientes.png', onClick: () => setMostrarListaClientes(true) },
-                    { name: 'inventario', label: 'Inventario', icon: '/icons/inventario.png', onClick: abrirInventario },
+                    { name: 'inventario', label: 'Inventario', icon: '/icons/inventario.png', onClick: abrirListaInventario },
                     { name: 'tiposMovimiento', label: 'Tipos Movimiento', icon: '/icons/factura-ordinaria.png', onClick: abrirTiposDeMovimiento },
                     { name: 'reportes', label: 'Reportes', icon: '/icons/reportes.png', onClick: () => setMostrarReportes(true) },
                     { name: 'vendedor', label: 'Vendedor', icon: '/icons/vendedor.webp', onClick: abrirEdicionVendedor },
@@ -157,7 +160,8 @@ export default function HomeMenu() {
             <Modal show={mostrarFormularioProducto} onClose={handleCancelarFormulario}>
                 <FormularioProducto
                     productoEditado={productoEditado}
-                    onCancel={handleCancelarFormulario}
+                    onBack={handleCancelarFormulario}
+                    onClose={() => setMostrarFormularioProducto(false) | setMostrarListaProductos(false)}
                     onSave={handleGuardarProducto}
                 />
             </Modal>
@@ -177,9 +181,18 @@ export default function HomeMenu() {
                 <HistorialVentas onClose={() => setMostrarHistorialVentas(false)} />
             </Modal>
 
+            {/* Modal lista inventario */}
+            <Modal show={mostrarListaInventario} onClose={() => setMostrarListaInventario(false)}>
+                <ListaInventario 
+                    onAddInventario={() => setMostrarFormularioInventario(true) | setMostrarListaInventario(false)} 
+                    onBack={() => setMostrarListaInventario(false)} />
+            </Modal>
+
             {/* Modal inventario */}
-            <Modal show={mostrarInventario} onClose={() => setMostrarInventario(false)}>
-                <Inventario onClose={() => setMostrarInventario(false)} />
+            <Modal show={mostrarFormularioInventario} onClose={() => setMostrarFormularioInventario(false)}>
+                <FormularioInventario 
+                onBack={() => setMostrarFormularioInventario(false) | setMostrarListaInventario(true)}
+                onClose={() => setMostrarFormularioInventario(false)} />
             </Modal>
 
             {/* Modal edición de vendedor */}
