@@ -96,12 +96,30 @@ export default function Reportes({ onClose, onBack }) {
       return;
     }
     const doc = new jsPDF();
-    
+
+    // Construir descripción de filtros activos
+    let filtrosDesc = [];
+    if (filtros.producto && producto) {
+      filtrosDesc.push(`Producto: ${producto}`);
+    }
+    if (filtros.periodo && fechaInicio && fechaFin) {
+      filtrosDesc.push(`Periodo: ${fechaInicio} a ${fechaFin}`);
+    }
+    if (filtrosDesc.length > 0) {
+      doc.setFontSize(12);
+      doc.text('Filtros aplicados:', 14, 16);
+      filtrosDesc.forEach((f, i) => {
+        doc.text(f, 14, 24 + i * 8);
+      });
+    }
+
+    // Ajustar el inicio de la tabla si hay filtros
+    let startY = filtrosDesc.length > 0 ? 32 + (filtrosDesc.length - 1) * 8 : 10;
     if (!tableRef.current) {
       setError('No hay datos para exportar');
       return;
     }
-    autoTable(doc, { html: tableRef.current });
+    autoTable(doc, { html: tableRef.current, startY });
     doc.save(`reporte_${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
