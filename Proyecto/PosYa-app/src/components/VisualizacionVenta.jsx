@@ -1,10 +1,61 @@
 import React, { useEffect, useState } from 'react';
+import { FiX, FiChevronLeft, FiTrash2, FiDownload } from 'react-icons/fi';
 
-const VisualizacionVenta = ({ codigo, onClose }) => {
+// Modal de confirmación reutilizable (idéntico a HistorialVentas)
+function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 'Confirmar', cancelText = 'Cancelar' }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-lg shadow-md p-6 max-w-sm w-full">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
+        <p className="mb-6 text-gray-700">{message}</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Recibe onVentaEliminada opcional para notificar al padre (HistorialVentas)
+const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
   const [venta, setVenta] = useState(null);
   const [productos, setProductos] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [eliminando, setEliminando] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [mensaje, setMensaje] = useState(null);
+  async function eliminarVenta() {
+    if (!venta || !venta.numero) return;
+    setEliminando(true);
+    setMensaje(null);
+    try {
+      const resp = await fetch(`http://localhost:3000/api/venta/${encodeURIComponent(venta.numero)}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('No se pudo eliminar la venta');
+      setMensaje('Venta eliminada correctamente.');
+      // Notificar al padre si existe el callback (como en HistorialVentas)
+      if (onVentaEliminada) onVentaEliminada(venta.numero);
+      setTimeout(() => {
+        setEliminando(false);
+        setShowConfirmDelete(false);
+        if (onClose) onClose();
+      }, 1200);
+    } catch (err) {
+      setMensaje('Error al eliminar la venta: ' + err.message);
+      setEliminando(false);
+    }
+  }
 
   useEffect(() => {
     if (!codigo) {
@@ -159,74 +210,140 @@ const VisualizacionVenta = ({ codigo, onClose }) => {
   if (error) return <div className="p-8 text-red-500">{error}</div>;
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-8 max-w-6xl mx-auto relative">
-      {onClose && (
-        <button onClick={onClose} className="absolute top-4 right-4 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center text-xl font-bold">×</button>
+    <div className="bg-white rounded-lg shadow-lg p-8 max-w-6xl mx-auto relative" style={{ maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto' }}>
+      {/* Botón cerrar */}
+      <button 
+        onClick={onClose} 
+        className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+        aria-label="Cerrar"
+      >
+        <FiX className="w-6 h-6" />
+      </button>
+
+      <h1 className="text-2xl font-bold mb-6 text-center">Detalle de Venta</h1>
+      {/* Mensaje de éxito/error */}
+      {mensaje && (
+        <div className={`mb-4 text-center font-semibold ${mensaje.includes('eliminada') ? 'text-green-600' : 'text-red-600'}`}>{mensaje}</div>
       )}
-      <h1 className="text-3xl font-bold mb-6 text-center">Detalle de Venta</h1>
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">Información General</h2>
-        <p><strong>Número:</strong> {venta.numero}</p>
-        <p><strong>Fecha:</strong> {venta.fecha}</p>
-        <p><strong>Hora:</strong> {venta.hora}</p>
-        <p><strong>Cliente:</strong> {venta.cliente}</p>
-        <p><strong>Total:</strong> {venta.total}</p>
-        <p><strong>Dirección Cliente:</strong> {venta.direccion_cliente || ''}</p>
-        <p><strong>Correo Cliente:</strong> {venta.correo_cliente || ''}</p>
-        <p><strong>Vendedor:</strong> {venta.vendedor || ''}</p>
-        <button onClick={() => generarPDFVenta(venta, productos)} className="mt-4 mb-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold">Descargar PDF</button>
+
+      {/* Información General */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Número:</span> <span className="text-gray-800">{venta.numero}</span></div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Fecha:</span> <span className="text-gray-800">{venta.fecha}</span></div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Hora:</span> <span className="text-gray-800">{venta.hora}</span></div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Cliente:</span> <span className="text-gray-800">{venta.cliente}</span></div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Total:</span> <span className="text-gray-800">{venta.total}</span></div>
+        </div>
+        <div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Dirección Cliente:</span> <span className="text-gray-800">{venta.direccion_cliente || ''}</span></div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Correo Cliente:</span> <span className="text-gray-800">{venta.correo_cliente || ''}</span></div>
+          <div className="mb-2"><span className="font-medium text-gray-700">Vendedor:</span> <span className="text-gray-800">{venta.vendedor || ''}</span></div>
+        </div>
       </div>
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Productos Vendidos</h2>
-        {productos.length > 0 ? (
-          <div className="overflow-x-auto md:overflow-x-visible">
-            <table className="min-w-full bg-white rounded-lg shadow mr-8">
-              <thead>
-                <tr className="bg-gray-200 text-gray-700">
-                  <th className="py-1 px-2 text-xs whitespace-nowrap">Producto</th>
-                  <th className="py-1 px-2 text-xs whitespace-nowrap">Cantidad</th>
-                  <th className="py-1 px-2 text-xs whitespace-nowrap">Precio Unitario</th>
-                  <th className="py-1 px-2 text-xs whitespace-nowrap">IVA</th>
-                  <th className="py-1 px-2 text-xs whitespace-nowrap">Subtotal</th>
-                  <th className="py-1 px-2 text-xs whitespace-nowrap">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productos.map((p, idx) => (
-                  <tr key={idx}>
-                    <td className="py-1 px-2 text-xs whitespace-nowrap">{p.det_nombre_producto}</td>
-                    <td className="py-1 px-2 text-xs whitespace-nowrap">{p.det_cantidad}</td>
-                    <td className="py-1 px-2 text-xs whitespace-nowrap">${Number(p.det_precio_unitario).toFixed(2)}</td>
-                    <td className="py-1 px-2 text-xs whitespace-nowrap">${Number(p.det_IVA_unitario).toFixed(2)}</td>
-                    <td className="py-1 px-2 text-xs whitespace-nowrap">${Number(p.det_submonto).toFixed(2)}</td>
-                    <td className="py-1 px-2 text-xs whitespace-nowrap">${Number(p.det_monto).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p>No hay productos registrados en esta venta.</p>
-        )}
-        {/* Subtotal y Total al pie */}
-        {productos.length > 0 && (
-          <div className="flex flex-col items-end mt-4">
-            {(() => {
-              let subtotal = 0, total = 0;
-              productos.forEach(p => {
-                subtotal += Number(p.det_submonto);
-                total += Number(p.det_monto);
-              });
+
+      {/* Productos Vendidos */}
+      <h2 className="text-lg font-semibold mb-2">Productos</h2>
+      <div className="overflow-x-auto mb-4" style={{ maxHeight: '260px', overflowY: 'auto' }}>
+        <table className="min-w-full bg-white rounded-lg">
+          <thead>
+            <tr className="bg-gray-100 text-gray-700">
+              <th className="py-2 px-3 text-left">Producto</th>
+              <th className="py-2 px-3 text-center">Cantidad</th>
+              <th className="py-2 px-3 text-right">P. Unitario</th>
+              <th className="py-2 px-3 text-right">IVA Unitario</th>
+              <th className="py-2 px-3 text-right">Subtotal</th>
+              <th className="py-2 px-3 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {productos.map((p, idx) => {
+              const precio = parseFloat(p.det_precio_unitario) || 0;
+              const iva = parseFloat(p.det_IVA_unitario) || 0;
+              const cantidad = parseFloat(p.det_cantidad) || 0;
+              const subtotalProd = (precio * cantidad).toFixed(2);
+              const totalProd = ((precio + iva) * cantidad).toFixed(2);
               return (
-                <>
-                  <div className="text-base font-semibold">Subtotal: <span className="font-normal">${subtotal.toFixed(2)}</span></div>
-                  <div className="text-lg font-bold">Total: <span className="font-normal">${total.toFixed(2)}</span></div>
-                </>
+                <tr key={idx} className="border-t border-gray-200 hover:bg-gray-50">
+                  <td className="py-2 px-3">{p.det_nombre_producto}</td>
+                  <td className="py-2 px-3 text-center">{p.det_cantidad}</td>
+                  <td className="py-2 px-3 text-right">${precio.toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right">${iva.toFixed(2)}</td>
+                  <td className="py-2 px-3 text-right font-medium">${subtotalProd}</td>
+                  <td className="py-2 px-3 text-right font-bold text-green-600">${totalProd}</td>
+                </tr>
               );
-            })()}
-          </div>
-        )}
+            })}
+          </tbody>
+        </table>
       </div>
+      {productos.length === 0 && (
+        <p className="text-gray-500">No hay productos registrados en esta venta.</p>
+      )}
+
+      {/* Resumen de totales */}
+      {productos.length > 0 && (
+        <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100 flex justify-end">
+          {(() => {
+            let subtotal = 0, total = 0;
+            productos.forEach(p => {
+              subtotal += Number(p.det_submonto);
+              total += Number(p.det_monto);
+            });
+            return (
+              <>
+                <div className="text-right mr-8">
+                  <div className="text-sm text-blue-600">Subtotal</div>
+                  <div className="text-xl font-bold">${subtotal.toFixed(2)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-green-600">Total</div>
+                  <div className="text-2xl font-bold text-green-600">${total.toFixed(2)}</div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Botón de acción */}
+      <div className="flex justify-end space-x-4 mt-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+        >
+          <FiChevronLeft className="mr-2" />
+          Volver
+        </button>
+        <button
+          onClick={() => generarPDFVenta(venta, productos)}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold flex items-center"
+        >
+          <FiDownload className="mr-2" />
+          Generar factura ordinaria
+        </button>
+        <button
+          type="button"
+          disabled={eliminando}
+          onClick={() => setShowConfirmDelete(true)}
+          className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-semibold transition-colors disabled:opacity-60"
+        >
+          <FiTrash2 className="mr-2" />
+          Eliminar
+        </button>
+      </div>
+      {/* Modal de confirmación igual a HistorialVentas */}
+      {showConfirmDelete && venta && (
+        <ConfirmationModal
+          title="Confirmar Eliminación"
+          message={`¿Estás seguro de que deseas eliminar la venta N° ${venta.numero}? Esta acción no se puede deshacer.`}
+          onConfirm={eliminando ? undefined : eliminarVenta}
+          onCancel={() => setShowConfirmDelete(false)}
+          confirmText={eliminando ? 'Eliminando...' : 'Sí, eliminar'}
+          cancelText="No, cancelar"
+        />
+      )}
     </div>
   );
 };

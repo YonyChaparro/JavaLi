@@ -358,7 +358,11 @@ app.get('/api/venta', (req, res) => {
       ven_codigo AS numero,
       ven_fecha AS fecha,
       ven_hora AS hora,
-      ven_nombre_cliente || ' ' || IFNULL(ven_apellido_cliente, '') AS cliente,
+      -- Si hay razón social, úsala; si no, concatena nombre y apellido
+      CASE 
+        WHEN ven_razon_social_cliente IS NOT NULL AND TRIM(ven_razon_social_cliente) != '' THEN ven_razon_social_cliente
+        ELSE TRIM(ven_nombre_cliente || ' ' || IFNULL(ven_apellido_cliente, ''))
+      END AS cliente,
       ven_total AS total,
       ven_direccion_cliente AS direccion_cliente,
       ven_correo_electronico_cliente AS correo_cliente,
