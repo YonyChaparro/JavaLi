@@ -33,18 +33,18 @@ db.exec(sqlScript, (err) => {
 });
 
 // Endpoint para consultar existencias actuales de un producto
-app.get('/api/existencias/:pro_codigo', (req, res) => {
-  const pro_codigo = req.params.pro_codigo;
+app.get('/api/existencias/:codigo_producto', (req, res) => {
+  const codigo_producto = req.params.codigo_producto;
   // Suma todas las entradas y salidas para ese producto
   const query = `
-    SELECT IFNULL(SUM(CASE WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad
-                           WHEN t.tip_tipo_flujo = 'Salida' THEN -m.mov_cantidad
+    SELECT IFNULL(SUM(CASE WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad
+                           WHEN t.tipo_flujo = 'Salida' THEN -m.cantidad
                            ELSE 0 END), 0) AS existencias
     FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
-    WHERE m.pro_codigo = ?
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
+    WHERE m.codigo_producto = ?
   `;
-  db.get(query, [pro_codigo], (err, row) => {
+  db.get(query, [codigo_producto], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ existencias: row ? row.existencias : 0 });
   });
@@ -366,7 +366,7 @@ app.get('/api/venta', (req, res) => {
       ven_total AS total,
       ven_direccion_cliente AS direccion_cliente,
       ven_correo_electronico_cliente AS correo_cliente,
-      ven_numero_telefonico_cliente AS telefono_cliente,
+      ven_numero_telefonico_cliente AS numero_telefonico_cliente,
       ven_nombre_o_razon_social_vendedor AS vendedor,
       ven_NIT_vendedor AS nit_vendedor,
       ven_direccion_vendedor AS direccion_vendedor,
@@ -446,7 +446,7 @@ app.get('/api/insertar-datos-prueba', (req, res) => {
 
 // Endpoint para obtener tipos de movimiento de inventario
 app.get('/api/tipos-movimiento', (req, res) => {
-  const query = 'SELECT tip_codigo, tip_nombre, tip_tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO';
+  const query = 'SELECT codigo, nombre, tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO';
   db.all(query, [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -458,7 +458,7 @@ app.get('/api/tipos-movimiento', (req, res) => {
 // Endpoint para eliminar un tipo de movimiento de inventario
 app.delete('/api/tipos-movimiento/:codigo', (req, res) => {
   const codigo = req.params.codigo;
-  db.run('DELETE FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_codigo = ?', [codigo], function(err) {
+  db.run('DELETE FROM TIPO_MOVIMIENTO_INVENTARIO WHERE codigo = ?', [codigo], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -471,25 +471,25 @@ app.delete('/api/tipos-movimiento/:codigo', (req, res) => {
 
 // Endpoint para crear un tipo de movimiento de inventario
 app.post('/api/tipos-movimiento', (req, res) => {
-  const { tip_nombre, tip_tipo_flujo } = req.body;
-  if (!tip_nombre || !tip_tipo_flujo) {
+  const { nombre, tipo_flujo } = req.body;
+  if (!nombre || !tipo_flujo) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
   }
   db.run(
-  'INSERT INTO TIPO_MOVIMIENTO_INVENTARIO (tip_nombre, tip_tipo_flujo) VALUES (?, ?)',
-  [tip_nombre, tip_tipo_flujo],
+  'INSERT INTO TIPO_MOVIMIENTO_INVENTARIO (nombre, tipo_flujo) VALUES (?, ?)',
+  [nombre, tipo_flujo],
   function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    res.json({ ok: true, tip_codigo: this.lastID });
+    res.json({ ok: true, codigo: this.lastID });
   });
 });
 
 // Endpoint para obtener un tipo de movimiento por código
 app.get('/api/tipos-movimiento/:codigo', (req, res) => {
   const codigo = req.params.codigo;
-  db.get('SELECT tip_codigo, tip_nombre, tip_tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_codigo = ?', [codigo], (err, row) => {
+  db.get('SELECT codigo, nombre, tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE codigo = ?', [codigo], (err, row) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -503,13 +503,13 @@ app.get('/api/tipos-movimiento/:codigo', (req, res) => {
 // Endpoint para actualizar un tipo de movimiento
 app.put('/api/tipos-movimiento/:codigo', (req, res) => {
   const codigo = req.params.codigo;
-  const { tip_nombre, tip_tipo_flujo } = req.body;
-  if (!tip_nombre || !tip_tipo_flujo) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
+  const { nombre, tipo_flujo } = req.body;
+  if (!nombre || !tipo_flujo) {
+    return res.status(400).json({ error: 'Faltan campos requeridos '});
   }
   db.run(
-    'UPDATE TIPO_MOVIMIENTO_INVENTARIO SET tip_nombre = ?, tip_tipo_flujo = ? WHERE tip_codigo = ?',
-    [tip_nombre, tip_tipo_flujo, codigo],
+    'UPDATE TIPO_MOVIMIENTO_INVENTARIO SET nombre = ?, tipo_flujo = ? WHERE codigo = ?',
+    [nombre, tipo_flujo, codigo],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -535,19 +535,19 @@ app.post('/api/clientes', (req, res) => {
     numeroDocumento,
     direccion,
     ciudad, 
-    telefono, 
-    email
+    numero_telefonico, 
+    correo_electronico
   } = req.body;
 
-  if (!numeroDocumento || !email) {
+  if (!numeroDocumento || !correo_electronico) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
   db.serialize(() => {
     // Insertar en CLIENTE
     db.run(
-      'INSERT OR REPLACE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)',
-      [numeroDocumento, direccion || '', email, ciudad || '', telefono || ''],
+      'INSERT OR REPLACE INTO CLIENTE (identificacion, direccion, correo_electronico, ciudad, numero_telefonico) VALUES (?, ?, ?, ?, ?)',
+      [numeroDocumento, direccion || '', correo_electronico, ciudad || '', numero_telefonico || ''],
       function (err) {
         if (err) {
           return res.status(500).json({ error: err.message });
@@ -558,7 +558,7 @@ app.post('/api/clientes', (req, res) => {
           const apellidoCompleto = [primerApellido, segundoApellido].filter(Boolean).join(' ');
           // Insertar en CLIENTE_NATURAL
           db.run(
-            'INSERT OR REPLACE INTO CLIENTE_NATURAL (cli_identificacion, cli_tipo_de_documento, cli_nombre, cli_apellido) VALUES (?, ?, ?, ?)',
+            'INSERT OR REPLACE INTO CLIENTE_NATURAL (identificacion, tipo_de_documento, nombre, apellido) VALUES (?, ?, ?, ?)',
             [numeroDocumento, tipoDocumento || '', nombreCompleto, apellidoCompleto],
             function (err2) {
               if (err2) {
@@ -575,15 +575,15 @@ app.post('/api/clientes', (req, res) => {
                 numeroDocumento,
                 direccion,
                 ciudad,
-                telefono,
-                email
+                numero_telefonico,
+                correo_electronico
               });
             }
           );
         } else if (tipoCliente === 'juridica') {
           // Insertar en CLIENTE_JURIDICO
           db.run(
-            'INSERT OR REPLACE INTO CLIENTE_JURIDICO (cli_identificacion, cli_razon_social) VALUES (?, ?)',
+            'INSERT OR REPLACE INTO CLIENTE_JURIDICO (identificacion, razon_social) VALUES (?, ?)',
             [numeroDocumento, razonSocial],
             function (err2) {
               if (err2) {
@@ -597,8 +597,8 @@ app.post('/api/clientes', (req, res) => {
                 numeroDocumento,
                 direccion,
                 ciudad,
-                telefono,
-                email
+                numero_telefonico,
+                correo_electronico
               });
             }
           );
@@ -613,63 +613,63 @@ app.post('/api/clientes', (req, res) => {
 // Endpoint para obtener todos los clientes
 app.get('/api/clientes', (req, res) => {
   // Consulta clientes base
-  const queryClientes = `SELECT cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico FROM CLIENTE`;
+  const queryClientes = `SELECT identificacion, direccion, correo_electronico, ciudad, numero_telefonico FROM CLIENTE`;
   db.all(queryClientes, [], (err, clientes) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!clientes.length) return res.json([]);
 
     // Consultar detalles de naturales y jurídicos
-    const ids = clientes.map(c => `'${c.cli_identificacion}'`).join(',');
-    const queryNaturales = `SELECT * FROM CLIENTE_NATURAL WHERE cli_identificacion IN (${ids})`;
-    const queryJuridicos = `SELECT * FROM CLIENTE_JURIDICO WHERE cli_identificacion IN (${ids})`;
+    const ids = clientes.map(c => `'${c.identificacion}'`).join(',');
+    const queryNaturales = `SELECT * FROM CLIENTE_NATURAL WHERE identificacion IN (${ids})`;
+    const queryJuridicos = `SELECT * FROM CLIENTE_JURIDICO WHERE identificacion IN (${ids})`;
 
     db.all(queryNaturales, [], (err2, naturales) => {
       if (err2) return res.status(500).json({ error: err2.message });
       db.all(queryJuridicos, [], (err3, juridicos) => {
         if (err3) return res.status(500).json({ error: err3.message });
         // Unir datos
-        const naturalesMap = Object.fromEntries(naturales.map(n => [n.cli_identificacion, n]));
-        const juridicosMap = Object.fromEntries(juridicos.map(j => [j.cli_identificacion, j]));
+        const naturalesMap = Object.fromEntries(naturales.map(n => [n.identificacion, n]));
+        const juridicosMap = Object.fromEntries(juridicos.map(j => [j.identificacion, j]));
         const resultado = clientes.map(c => {
-          if (naturalesMap[c.cli_identificacion]) {
-            const n = naturalesMap[c.cli_identificacion];
+          if (naturalesMap[c.identificacion]) {
+            const n = naturalesMap[c.identificacion];
             return {
               tipo: 'natural',
-              id: c.cli_identificacion,
-              primerNombre: (n.cli_nombre || '').split(' ')[0] || '',
-              segundoNombre: (n.cli_nombre || '').split(' ').slice(1).join(' '),
-              primerApellido: (n.cli_apellido || '').split(' ')[0] || '',
-              segundoApellido: (n.cli_apellido || '').split(' ').slice(1).join(' '),
-              tipoDocumento: n.cli_tipo_de_documento,
-              numeroDocumento: c.cli_identificacion,
-              direccion: c.cli_direccion,
-              ciudad: c.cli_ciudad,
-              telefono: c.cli_numero_telefonico,
-              email: c.cli_correo_electronico
+              id: c.identificacion,
+              primerNombre: (n.nombre || '').split(' ')[0] || '',
+              segundoNombre: (n.nombre || '').split(' ').slice(1).join(' '),
+              primerApellido: (n.apellido || '').split(' ')[0] || '',
+              segundoApellido: (n.apellido || '').split(' ').slice(1).join(' '),
+              tipoDocumento: n.tipo_de_documento,
+              numeroDocumento: c.identificacion,
+              direccion: c.direccion,
+              ciudad: c.ciudad,
+              numero_telefonico: c.numero_telefonico,
+              correo_electronico: c.correo_electronico
             };
-          } else if (juridicosMap[c.cli_identificacion]) {
-            const j = juridicosMap[c.cli_identificacion];
+          } else if (juridicosMap[c.identificacion]) {
+            const j = juridicosMap[c.identificacion];
             return {
               tipo: 'juridica', // Siempre 'juridica' (femenino)
-              id: c.cli_identificacion,
-              razonSocial: j.cli_razon_social,
+              id: c.identificacion,
+              razonSocial: j.razon_social,
               tipoDocumento: 'NIT',
-              numeroDocumento: c.cli_identificacion,
-              direccion: c.cli_direccion,
-              ciudad: c.cli_ciudad,
-              telefono: c.cli_numero_telefonico,
-              email: c.cli_correo_electronico
+              numeroDocumento: c.identificacion,
+              direccion: c.direccion,
+              ciudad: c.ciudad,
+              numero_telefonico: c.numero_telefonico,
+              correo_electronico: c.correo_electronico
             };
           } else {
             // Cliente sin detalle
             return {
               tipo: 'desconocido',
-              id: c.cli_identificacion,
-              numeroDocumento: c.cli_identificacion,
-              direccion: c.cli_direccion,
-              ciudad: c.cli_ciudad,
-              telefono: c.cli_numero_telefonico,
-              email: c.cli_correo_electronico
+              id: c.identificacion,
+              numeroDocumento: c.identificacion,
+              direccion: c.direccion,
+              ciudad: c.ciudad,
+              numero_telefonico: c.numero_telefonico,
+              correo_electronico: c.correo_electronico
             };
           }
         });
@@ -693,19 +693,19 @@ app.put('/api/clientes/:id', (req, res) => {
     numeroDocumento,
     direccion,
     ciudad,
-    telefono,
-    email
+    numero_telefonico,
+    correo_electronico
   } = req.body;
 
-  if (!numeroDocumento || !email) {
+  if (!numeroDocumento || !correo_electronico) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
   db.serialize(() => {
     // Actualizar CLIENTE
     db.run(
-      'UPDATE CLIENTE SET cli_direccion = ?, cli_correo_electronico = ?, cli_ciudad = ?, cli_numero_telefonico = ? WHERE cli_identificacion = ?',
-      [direccion || '', email, ciudad || '', telefono || '', id],
+      'UPDATE CLIENTE SET direccion = ?, correo_electronico = ?, ciudad = ?, numero_telefonico = ? WHERE identificacion = ?',
+      [direccion || '', correo_electronico, ciudad || '', numero_telefonico || '', id],
       function (err) {
         if (err) {
           return res.status(500).json({ error: err.message });
@@ -715,7 +715,7 @@ app.put('/api/clientes/:id', (req, res) => {
           const nombreCompleto = [primerNombre, segundoNombre].filter(Boolean).join(' ');
           const apellidoCompleto = [primerApellido, segundoApellido].filter(Boolean).join(' ');
           db.run(
-            'UPDATE CLIENTE_NATURAL SET cli_tipo_de_documento = ?, cli_nombre = ?, cli_apellido = ? WHERE cli_identificacion = ?',
+            'UPDATE CLIENTE_NATURAL SET tipo_de_documento = ?, nombre = ?, apellido = ? WHERE identificacion = ?',
             [tipoDocumento || '', nombreCompleto, apellidoCompleto, id],
             function (err2) {
               if (err2) {
@@ -733,15 +733,15 @@ app.put('/api/clientes/:id', (req, res) => {
                 numeroDocumento: id,
                 direccion,
                 ciudad,
-                telefono,
-                email
+                numero_telefonico,
+                correo_electronico
               });
             }
           );
         } else if (tipoCliente === 'juridica') {
           // Actualizar CLIENTE_JURIDICO
           db.run(
-            'UPDATE CLIENTE_JURIDICO SET cli_razon_social = ? WHERE cli_identificacion = ?',
+            'UPDATE CLIENTE_JURIDICO SET razon_social = ? WHERE identificacion = ?',
             [razonSocial, id],
             function (err2) {
               if (err2) {
@@ -755,8 +755,8 @@ app.put('/api/clientes/:id', (req, res) => {
                 numeroDocumento: id,
                 direccion,
                 ciudad,
-                telefono,
-                email
+                numero_telefonico,
+                correo_electronico
               });
             }
           );
@@ -778,9 +778,9 @@ app.delete('/api/clientes/:id', (req, res) => {
   // Usamos serialize para asegurar que las eliminaciones se ejecuten en orden.
   // Esto elimina al cliente de las tablas de detalle y luego de la tabla principal.
   db.serialize(() => {
-    db.run('DELETE FROM CLIENTE_NATURAL WHERE cli_identificacion = ?', [id]);
-    db.run('DELETE FROM CLIENTE_JURIDICO WHERE cli_identificacion = ?', [id]);
-    db.run('DELETE FROM CLIENTE WHERE cli_identificacion = ?', [id], function(err) {
+    db.run('DELETE FROM CLIENTE_NATURAL WHERE identificacion = ?', [id]);
+    db.run('DELETE FROM CLIENTE_JURIDICO WHERE identificacion = ?', [id]);
+    db.run('DELETE FROM CLIENTE WHERE identificacion = ?', [id], function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }

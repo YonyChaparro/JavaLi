@@ -3,13 +3,13 @@ import { FiEdit2, FiTrash2, FiChevronLeft, FiPlus } from 'react-icons/fi';
 import EditarTipoMovimiento from './EditarTipoMovimiento';
 
 function TipoMovimientoRow({ row, onEdit, onDelete }) {
-  const isDefault = row.tip_codigo <= 4;
+  const isDefault = row.codigo <= 4;
 
   return (
     <tr className="hover:bg-gray-50">
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.tip_codigo}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.tip_nombre}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.tip_tipo_flujo}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.codigo}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.nombre}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.tipo_flujo}</td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
         <button
           onClick={e => { e.stopPropagation(); onEdit(row); }}
@@ -53,7 +53,7 @@ function CrearTipoMovimientoModal({ onClose, onSuccess }) {
       const resp = await fetch('http://localhost:3000/api/tipos-movimiento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tip_nombre: nombre.trim(), tip_tipo_flujo: flujo })
+        body: JSON.stringify({ nombre: nombre.trim(), tipo_flujo: flujo })
       });
       if (resp.ok) {
         if (onSuccess) onSuccess();
@@ -199,7 +199,7 @@ export default function TipoMovimiento({ onBack }) {
       const resp = await fetch('http://localhost:3000/api/tipos-movimiento');
       const data = await resp.json();
       if (Array.isArray(data)) {
-        data.sort((a, b) => a.tip_codigo - b.tip_codigo);
+        data.sort((a, b) => a.codigo - b.codigo);
         setTipos(data);
       } else {
         setTipos([]);
@@ -230,7 +230,7 @@ export default function TipoMovimiento({ onBack }) {
   const confirmDelete = async () => {
     if (!itemToDelete) return;
     try {
-      const resp = await fetch(`http://localhost:3000/api/tipos-movimiento/${itemToDelete.tip_codigo}`, {
+      const resp = await fetch(`http://localhost:3000/api/tipos-movimiento/${itemToDelete.codigo}`, {
         method: 'DELETE'
       });
       if (resp.ok) {
@@ -249,7 +249,7 @@ export default function TipoMovimiento({ onBack }) {
   };
 
   const handleEdit = (row) => {
-    setCodigoEditar(row.tip_codigo);
+    setCodigoEditar(row.codigo);
     setEditarKey(Date.now());
     setShowEditar(true);
   };
@@ -306,7 +306,7 @@ export default function TipoMovimiento({ onBack }) {
             ) : (
               tipos.map(row => (
                 <TipoMovimientoRow
-                  key={row.tip_codigo}
+                  key={row.codigo}
                   row={row}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
@@ -344,7 +344,7 @@ export default function TipoMovimiento({ onBack }) {
       {showConfirmDelete && itemToDelete && (
         <ConfirmationModal
           title="Confirmar Eliminación"
-          message={`¿Estás seguro de que deseas eliminar el tipo de movimiento "${itemToDelete.tip_nombre}" (Código: ${itemToDelete.tip_codigo})? Esta acción no se puede deshacer.`}
+          message={`¿Estás seguro de que deseas eliminar el tipo de movimiento "${itemToDelete.nombre}" (Código: ${itemToDelete.codigo})? Esta acción no se puede deshacer.`}
           onConfirm={confirmDelete}
           onCancel={() => {
             setShowConfirmDelete(false);

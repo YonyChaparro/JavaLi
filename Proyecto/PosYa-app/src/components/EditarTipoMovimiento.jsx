@@ -16,9 +16,9 @@ export default function EditarTipoMovimiento({ codigo, onClose, onSuccess }) {
         return resp.json();
       })
       .then(data => {
-        setCodigoTipo(data.tip_codigo);
-        setNombre(data.tip_nombre);
-        setFlujo(data.tip_tipo_flujo);
+        setCodigoTipo(data.codigo);
+        setNombre(data.nombre);
+        setFlujo(data.tipo_flujo);
       })
       .catch(err => {
         setError('Error al cargar los datos: ' + err);
@@ -42,7 +42,7 @@ export default function EditarTipoMovimiento({ codigo, onClose, onSuccess }) {
       const resp = await fetch(`http://localhost:3000/api/tipos-movimiento/${codigo}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tip_nombre: nombre.trim(), tip_tipo_flujo: flujo })
+        body: JSON.stringify({ nombre: nombre.trim(), tipo_flujo: flujo })
       });
       if (resp.ok) {
         onSuccess && onSuccess();

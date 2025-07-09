@@ -63,12 +63,12 @@ const DetalleCliente = ({ cliente, onClose, onEdit, onDelete }) => {
 
             <div>
               <h4 className="text-sm font-medium text-gray-500">Teléfono</h4>
-              <p className="mt-1 text-sm text-gray-900">{cliente.telefono || '-'}</p>
+              <p className="mt-1 text-sm text-gray-900">{cliente.numero_telefonico || '-'}</p>
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-gray-500">Email</h4>
-              <p className="mt-1 text-sm text-gray-900">{cliente.email || '-'}</p>
+              <h4 className="text-sm font-medium text-gray-500">Correo electronico</h4>
+              <p className="mt-1 text-sm text-gray-900">{cliente.correo_electronico || '-'}</p>
             </div>
           </div>
 

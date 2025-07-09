@@ -13,8 +13,8 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
     numeroDocumento: '',
     direccion: '',
     ciudad: '',
-    telefono: '',
-    email: ''
+    numero_telefonico: '',
+    correo_electronico: ''
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,8 +34,8 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
         numeroDocumento: cliente.numeroDocumento || '',
         direccion: cliente.direccion || '',
         ciudad: cliente.ciudad || '',
-        telefono: cliente.telefono || '',
-        email: cliente.email || ''
+        numero_telefonico: cliente.numero_telefonico || '',
+        correo_electronico: cliente.correo_electronico || ''
       });
     } else {
       setTipoCliente('natural');
@@ -49,8 +49,8 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
         numeroDocumento: '',
         direccion: '',
         ciudad: '',
-        telefono: '',
-        email: ''
+        numero_telefonico: '',
+        correo_electronico: ''
       });
     }
   }, [cliente]);
@@ -82,8 +82,8 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
       numeroDocumento: '',
       direccion: '',
       ciudad: '',
-      telefono: '',
-      email: ''
+      numero_telefonico: '',
+      correo_electronico: ''
     });
     setErrors({});
   };
@@ -100,7 +100,7 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
     }
     
     if (!formData.numeroDocumento.trim()) newErrors.numeroDocumento = 'Número de documento es obligatorio';
-    if (!formData.email.trim()) newErrors.email = 'Correo electrónico es obligatorio';
+    if (!formData.correo_electronico.trim()) newErrors.correo_electronico = 'Correo electrónico es obligatorio';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -391,35 +391,35 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="numero_telefonico" className="block text-sm font-medium text-gray-700">
               Teléfono
             </label>
             <input
               type="tel"
-              id="telefono"
-              name="telefono"
-              value={formData.telefono}
+              id="numero_telefonico"
+              name="numero_telefonico"
+              value={formData.numero_telefonico}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="correo_electronico" className="block text-sm font-medium text-gray-700">
               Correo Electrónico*
             </label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
+              type="correo_electronico"
+              id="correo_electronico"
+              name="correo_electronico"
+              value={formData.correo_electronico}
               onChange={handleChange}
               className={`mt-1 block w-full border ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
+                errors.correo_electronico ? 'border-red-500' : 'border-gray-300'
               } rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
             />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            {errors.correo_electronico && (
+              <p className="mt-1 text-sm text-red-600">{errors.correo_electronico}</p>
             )}
           </div>
         </div>
