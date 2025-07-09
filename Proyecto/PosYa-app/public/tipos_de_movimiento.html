@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tipos de Movimiento de Inventario</title>
+    <link href="../src/styles/index.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 p-8">
+    <h1 class="text-2xl font-bold mb-6">Tipos de Movimiento de Inventario</h1>
+    <div class="mb-4 flex justify-end">
+        <button id="btn-crear-tipo-movimiento" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Crear tipo de movimiento
+        </button>
+    </div>
+    <table class="min-w-full bg-white border border-gray-300 rounded-lg shadow">
+        <thead>
+            <tr>
+                <th class="py-2 px-4 border-b">Código</th>
+                <th class="py-2 px-4 border-b">Nombre</th>
+                <th class="py-2 px-4 border-b">Tipo de Flujo</th>
+                <th class="py-2 px-4 border-b text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-tipos-movimiento">
+            <!-- Los registros se llenarán dinámicamente con JS -->
+        </tbody>
+    </table>
+    <script src="tipos_de_movimiento.js"></script>
+</body>
+</html>

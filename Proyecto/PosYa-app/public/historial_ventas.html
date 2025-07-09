@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Ventas</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold mb-6 text-center">Historial de Ventas</h1>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white rounded-lg shadow">
+                <thead>
+                    <tr class="bg-gray-200 text-gray-700">
+                        <th class="py-3 px-4 text-left">Número</th>
+                        <th class="py-3 px-4 text-left">Fecha</th>
+                        <th class="py-3 px-4 text-left">Hora</th>
+                        <th class="py-3 px-4 text-left">Cliente</th>
+                        <th class="py-3 px-4 text-left">Total</th>
+                        <th class="py-3 px-4 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="ventas-lista">
+                    <!-- Las filas de ventas se insertarán aquí con JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="historial_ventas.js"></script>
+        <div class="flex justify-end mt-8">
+            <button id="nueva-venta" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded shadow transition-colors duration-200">
+                Registrar nueva venta
+            </button>
+        </div>
+    <script src="historial_ventas.js"></script>
+</body>
+</html>
