@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Added useEffect import
 import HistorialVentas from '../components/HistorialVentas';
 import EdicionVendedor from '../components/EdicionVendedor';
 import ListaInventario from '../components/ListaInventario';
 import FormularioInventario from '../components/FormularioInventario';
 import Reportes from '../components/Reportes';
-
 import ListaClientes from '../components/ListaClientes';
 import TipoMovimiento from '../components/TipoMovimiento';
-
 import ListaProductos from '../components/ListaProductos';
 import FormularioProducto from '../components/FormularioProducto';
 
@@ -33,12 +31,34 @@ const MenuButton = ({ label, icon, onClick }) => (
     </div>
 );
 
-// Componente genérico para modales
+// Componente genérico para modales con animación
 const Modal = ({ children, show, onClose }) => {
-    if (!show) return null;
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        if (show) {
+            const timer = setTimeout(() => {
+                setIsVisible(true);
+            }, 50);
+            return () => clearTimeout(timer);
+        } else {
+            setIsVisible(false);
+        }
+    }, [show]);
+
+    if (!show && !isVisible) return null;
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-auto relative" onClick={(e) => e.stopPropagation()}>
+        <div
+            className={`fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'
+                }`}
+            onClick={onClose}
+        >
+            <div
+                className={`bg-white rounded-lg shadow-lg max-w-6xl w-auto max-h-[90vh] overflow-auto relative transform transition-all duration-300 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+                    }`}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {children}
             </div>
         </div>
@@ -46,7 +66,6 @@ const Modal = ({ children, show, onClose }) => {
 };
 
 export default function HomeMenu() {
-
     const [mostrarListaClientes, setMostrarListaClientes] = useState(false);
     const [mostrarTipoMovimiento, setMostrarTipoMovimiento] = useState(false);
 
@@ -138,15 +157,18 @@ export default function HomeMenu() {
 
             {/* Modal de Reportes */}
             <Modal show={mostrarReportes} onClose={() => setMostrarReportes(false)}>
-                <Reportes onClose={() => setMostrarReportes(false)} />
+                <Reportes 
+                    onClose={() => setMostrarReportes(false)} 
+                    onBack={() => setMostrarReportes(false)} 
+                />
             </Modal>
 
             {/* Modales lista de clientes*/}
             <Modal show={mostrarListaClientes} onClose={() => setMostrarListaClientes(false)}>
                 <ListaClientes
-                    onAddClient={() => {}}
-                    onEditClient={() => {}}
-                    onDeleteClient={() => {}}
+                    onAddClient={() => { }}
+                    onEditClient={() => { }}
+                    onDeleteClient={() => { }}
                     onBack={() => setMostrarListaClientes(false)}
                 />
             </Modal>
@@ -161,7 +183,10 @@ export default function HomeMenu() {
                 <FormularioProducto
                     productoEditado={productoEditado}
                     onBack={handleCancelarFormulario}
-                    onClose={() => setMostrarFormularioProducto(false) | setMostrarListaProductos(false)}
+                    onClose={() => {
+                        setMostrarFormularioProducto(false);
+                        setMostrarListaProductos(false);
+                    }}
                     onSave={handleGuardarProducto}
                 />
             </Modal>
@@ -171,7 +196,7 @@ export default function HomeMenu() {
                 <ListaProductos
                     onAddProduct={handleAgregarProducto}
                     onEditProduct={handleEditarProducto}
-                    onDeleteProduct={() => {}}
+                    onDeleteProduct={() => { }}
                     onBack={() => setMostrarListaProductos(false)}
                 />
             </Modal>
@@ -183,16 +208,22 @@ export default function HomeMenu() {
 
             {/* Modal lista inventario */}
             <Modal show={mostrarListaInventario} onClose={() => setMostrarListaInventario(false)}>
-                <ListaInventario 
-                    onAddInventario={() => setMostrarFormularioInventario(true) | setMostrarListaInventario(false)} 
+                <ListaInventario
+                    onAddInventario={() => {
+                        setMostrarFormularioInventario(true);
+                        setMostrarListaInventario(false);
+                    }}
                     onBack={() => setMostrarListaInventario(false)} />
             </Modal>
 
             {/* Modal inventario */}
             <Modal show={mostrarFormularioInventario} onClose={() => setMostrarFormularioInventario(false)}>
-                <FormularioInventario 
-                onBack={() => setMostrarFormularioInventario(false) | setMostrarListaInventario(true)}
-                onClose={() => setMostrarFormularioInventario(false)} />
+                <FormularioInventario
+                    onBack={() => {
+                        setMostrarFormularioInventario(false);
+                        setMostrarListaInventario(true);
+                    }}
+                    onClose={() => setMostrarFormularioInventario(false)} />
             </Modal>
 
             {/* Modal edición de vendedor */}

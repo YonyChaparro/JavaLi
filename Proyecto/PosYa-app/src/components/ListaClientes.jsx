@@ -12,13 +12,13 @@ function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 
         <div className="flex justify-end space-x-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition shadow" // Updated to rounded-md and added shadow
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition shadow" // Updated to rounded-md and added shadow
           >
             {confirmText}
           </button>
@@ -119,7 +119,7 @@ const ListaClientes = ({
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       {notification.message && (
-        <div className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white z-[60] ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+        <div className={`fixed top-5 right-5 p-4 rounded-md shadow-lg text-white z-[60] ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}> {/* Updated to rounded-md */}
           {notification.message}
         </div>
       )}
@@ -129,13 +129,13 @@ const ListaClientes = ({
         <div className="flex space-x-2">
           <button 
             onClick={onBack}
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition shadow" // Updated to rounded-md and added shadow
           >
             <FiChevronLeft className="inline mr-1" /> Volver
           </button>
           <button 
             onClick={() => setMostrarFormulario(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center shadow" // Updated to rounded-md and added shadow
           >
             <FiPlus className="mr-2" />
             Crear Cliente
@@ -151,7 +151,7 @@ const ListaClientes = ({
           <input
             type="text"
             placeholder="Buscar por nombre o documento..."
-            className="pl-10 pr-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 shadow-sm" // Updated to rounded-md, py-2, block, and added shadow-sm
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -194,7 +194,7 @@ const ListaClientes = ({
                   }}
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    15/06/2025 20:53:55
+                    15/06/2025 20:53:55 {/* This date is static, ideally would come from backend */}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {formatearDocumento(cliente)}
@@ -217,6 +217,7 @@ const ListaClientes = ({
                       }}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                       title="Editar cliente"
+                      aria-label="Editar cliente" // Added aria-label
                     >
                       <FiEdit2 />
                     </button>
@@ -227,6 +228,7 @@ const ListaClientes = ({
                       }}
                       className="text-red-600 hover:text-red-900"
                       title="Eliminar cliente"
+                      aria-label="Eliminar cliente" // Added aria-label
                     >
                       <FiTrash2 />
                     </button>
@@ -255,7 +257,7 @@ const ListaClientes = ({
             <button
               onClick={() => setPaginaActual(p => Math.max(p - 1, 1))}
               disabled={paginaActual === 1}
-              className={`px-3 py-1 rounded-md ${paginaActual === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+              className={`px-3 py-1 rounded-md shadow-sm ${paginaActual === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`} // Added shadow-sm
             >
               <FiChevronLeft />
             </button>
@@ -275,7 +277,7 @@ const ListaClientes = ({
                 <button
                   key={pagina}
                   onClick={() => setPaginaActual(pagina)}
-                  className={`px-3 py-1 rounded-md ${paginaActual === pagina ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  className={`px-3 py-1 rounded-md shadow-sm ${paginaActual === pagina ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`} // Added shadow-sm
                 >
                   {pagina}
                 </button>
@@ -283,8 +285,8 @@ const ListaClientes = ({
             })}
             <button
               onClick={() => setPaginaActual(p => Math.min(p + 1, totalPaginas))}
-              disabled={paginaActual === totalPaginas}
-              className={`px-3 py-1 rounded-md ${paginaActual === totalPaginas ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+              disabled={paginaActual === totalPagalas}
+              className={`px-3 py-1 rounded-md shadow-sm ${paginaActual === totalPaginas ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`} // Added shadow-sm
             >
               <FiChevronRight />
             </button>

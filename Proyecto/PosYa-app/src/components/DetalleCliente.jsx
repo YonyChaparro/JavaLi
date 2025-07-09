@@ -1,4 +1,3 @@
-import React from 'react';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 const DetalleCliente = ({ cliente, onClose, onEdit, onDelete }) => {
@@ -8,11 +7,12 @@ const DetalleCliente = ({ cliente, onClose, onEdit, onDelete }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <div className="flex justify-between items-start">
-            <h3 className="text-lg font-medium text-gray-900">Detalle del Cliente</h3>
+          <div className="flex justify-between items-start mb-4"> {/* Added mb-4 for spacing below header */}
+            <h3 className="text-lg font-semibold text-gray-900">Detalle del Cliente</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
+              className="text-gray-400 hover:text-gray-500 flex-shrink-0" // Added flex-shrink-0 for robustness
+              aria-label="Cerrar detalles del cliente" // Added ARIA label for accessibility
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -79,7 +79,7 @@ const DetalleCliente = ({ cliente, onClose, onEdit, onDelete }) => {
                 onEdit(cliente);
                 onClose();
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow" // Updated to rounded-md and added shadow
             >
               <FiEdit2 className="inline mr-2" />
               Editar
@@ -90,7 +90,7 @@ const DetalleCliente = ({ cliente, onClose, onEdit, onDelete }) => {
                 onDelete(cliente);
                 onClose();
               }}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition flex items-center"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition shadow" // Updated to rounded-md and added shadow
             >
               <FiTrash2 className="inline mr-2" />
               Eliminar
