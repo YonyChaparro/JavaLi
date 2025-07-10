@@ -94,7 +94,7 @@ const HistorialVentas = ({ onClose }) => {
     const terminoCliente = (clienteFiltro || '').toLowerCase();
     const coincideCliente =
       (v.cliente && v.cliente.toLowerCase().includes(terminoCliente)) ||
-      (v.ven_razon_social_cliente && v.ven_razon_social_cliente.toLowerCase().includes(terminoCliente));
+      (v.razon_social_cliente && v.razon_social_cliente.toLowerCase().includes(terminoCliente));
     // Filtro de rango de fechas
     let coincideFecha = true;
     if (fechaDesde) {
@@ -241,8 +241,8 @@ const HistorialVentas = ({ onClose }) => {
             ) : ventasPaginaActual.length > 0 ? (
               ventasPaginaActual.map((venta) => {
                 let clienteMostrar = '—';
-                if (venta.ven_razon_social_cliente && venta.ven_razon_social_cliente.trim() !== '') {
-                  clienteMostrar = venta.ven_razon_social_cliente;
+                if (venta.razon_social_cliente && venta.razon_social_cliente.trim() !== '') {
+                  clienteMostrar = venta.razon_social_cliente;
                 } else if (venta.cliente && venta.cliente.trim() !== '') {
                   clienteMostrar = venta.cliente;
                 }

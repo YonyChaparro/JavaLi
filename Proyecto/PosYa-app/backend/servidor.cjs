@@ -50,23 +50,28 @@ app.get('/api/existencias/:codigo_producto', (req, res) => {
   });
 });
 
-// Endpoint para guardar movimientos de inventario (tip_codigo ahora es INTEGER)
+// Endpoint para guardar movimientos de inventario
 app.post('/api/movimientos-inventario', express.json(), (req, res) => {
   const movimientos = req.body;
   if (!Array.isArray(movimientos) || movimientos.length === 0) {
     return res.status(400).json({ error: 'No hay movimientos para guardar.' });
   }
-  const stmt = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (mov_fecha, mov_cantidad, tip_codigo, pro_codigo) VALUES (?, ?, ?, ?)');
+  const stmt = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (fecha, cantidad, codigo_tipo_movimiento, codigo_producto) VALUES (?, ?, ?, ?)');
+  // Guardar la fecha en UTC (por defecto, como YYYY-MM-DD)
   const fecha = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   try {
     movimientos.forEach(mov => {
-      // tip_codigo puede venir como string, lo convertimos a entero
-      const tip_codigo_int = parseInt(mov.tip_codigo, 10);
-      stmt.run(fecha, mov.cantidad, tip_codigo_int, mov.pro_codigo);
+      // Validar que los campos requeridos existan
+      if (!mov.codigo_producto || !mov.cantidad || !mov.codigo_tipo_movimiento) {
+        throw new Error('Faltan campos requeridos en algún movimiento.');
+      }
+      const codigo_tipo_movimiento_int = parseInt(mov.codigo_tipo_movimiento, 10);
+      stmt.run(fecha, mov.cantidad, codigo_tipo_movimiento_int, mov.codigo_producto);
     });
     stmt.finalize();
     res.json({ ok: true });
   } catch (err) {
+    stmt.finalize();
     res.status(500).json({ error: err.message });
   }
 });
@@ -78,17 +83,17 @@ app.get('/api/movimientos-inventario', (req, res) => {
 
   let query = `
     SELECT 
-      m.mov_id,
-      m.mov_fecha,
-      m.mov_cantidad,
-      m.tip_codigo,
-      t.tip_nombre AS tipo_movimiento,
-      t.tip_tipo_flujo,
-      m.pro_codigo,
-      p.pro_nombre AS producto
+      m.id,
+      m.fecha,
+      m.cantidad,
+      m.codigo_tipo_movimiento,
+      t.nombre AS tipo_movimiento,
+      t.tipo_flujo,
+      m.codigo_producto,
+      p.nombre AS producto
     FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
-    JOIN PRODUCTO p ON m.pro_codigo = p.pro_codigo
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
+    JOIN PRODUCTO p ON m.codigo_producto = p.codigo
     WHERE 1=1
   `;
 
@@ -96,27 +101,29 @@ app.get('/api/movimientos-inventario', (req, res) => {
 
   // Filtros
   if (producto) {
-    query += ' AND (m.pro_codigo = ? OR p.pro_nombre LIKE ?)';
+    query += ' AND (m.codigo_producto = ? OR p.nombre LIKE ?)';
     params.push(producto, `%${producto}%`);
   }
 
   if (tipoMovimiento) {
-    query += ' AND (m.tip_codigo = ? OR t.tip_nombre LIKE ?)';
+    query += ' AND (m.codigo_tipo_movimiento = ? OR t.nombre LIKE ?)';
     params.push(tipoMovimiento, `%${tipoMovimiento}%`);
   }
 
   if (tipoFlujo) {
-    query += ' AND t.tip_tipo_flujo = ?';
+    query += ' AND t.tipo_flujo = ?';
     params.push(tipoFlujo);
   }
 
   if (fechaInicio && fechaFin) {
-    query += ' AND m.mov_fecha BETWEEN ? AND ?';
+    // Usar las fechas tal cual, sin conversión, para evitar desfases
+    query += ' AND date(m.fecha) BETWEEN date(?) AND date(?)';
     params.push(fechaInicio, fechaFin);
   }
 
+
   // Ordenación por fecha más reciente primero
-  query += ' ORDER BY m.mov_fecha DESC, m.mov_id DESC';
+  query += ' ORDER BY m.fecha DESC, m.id DESC';
 
   // Paginación
   const queryCount = `SELECT COUNT(*) as total FROM (${query})`;
@@ -149,30 +156,30 @@ app.get('/api/movimientos-inventario', (req, res) => {
 });
 
 // Endpoint para obtener el historial de movimientos de un producto específico
-app.get('/api/movimientos-inventario/producto/:pro_codigo', (req, res) => {
-  const { pro_codigo } = req.params;
+app.get('/api/movimientos-inventario/producto/:codigo_producto', (req, res) => {
+  const { codigo_producto } = req.params;
   const { limit = 50 } = req.query;
 
   const query = `
     SELECT 
-      m.mov_id,
-      m.mov_fecha,
-      m.mov_cantidad,
-      t.tip_nombre AS tipo_movimiento,
-      t.tip_tipo_flujo,
+      m.id,
+      m.fecha,
+      m.cantidad,
+      t.nombre AS tipo_movimiento,
+      t.tipo_flujo,
       CASE 
-        WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad
-        WHEN t.tip_tipo_flujo = 'Salida' THEN -m.mov_cantidad
+        WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad
+        WHEN t.tipo_flujo = 'Salida' THEN -m.cantidad
         ELSE 0
       END AS cantidad_con_signo
     FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
-    WHERE m.pro_codigo = ?
-    ORDER BY m.mov_fecha DESC, m.mov_id DESC
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
+    WHERE m.codigo_producto = ?
+    ORDER BY m.fecha DESC, m.id DESC
     LIMIT ?
   `;
 
-  db.all(query, [pro_codigo, Number(limit)], (err, rows) => {
+  db.all(query, [codigo_producto, Number(limit)], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -186,25 +193,25 @@ app.get('/api/movimientos-inventario/resumen', (req, res) => {
 
   let query = `
     SELECT 
-      p.pro_codigo,
-      p.pro_nombre AS producto,
-      SUM(CASE WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad ELSE 0 END) AS entradas,
-      SUM(CASE WHEN t.tip_tipo_flujo = 'Salida' THEN m.mov_cantidad ELSE 0 END) AS salidas,
-      SUM(CASE WHEN t.tip_tipo_flujo = 'Entrada' THEN m.mov_cantidad ELSE -m.mov_cantidad END) AS saldo
+      p.codigo,
+      p.nombre AS producto,
+      SUM(CASE WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad ELSE 0 END) AS entradas,
+      SUM(CASE WHEN t.tipo_flujo = 'Salida' THEN m.cantidad ELSE 0 END) AS salidas,
+      SUM(CASE WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad ELSE -m.cantidad END) AS saldo
     FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.tip_codigo = t.tip_codigo
-    JOIN PRODUCTO p ON m.pro_codigo = p.pro_codigo
+    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
+    JOIN PRODUCTO p ON m.codigo_producto = p.codigo
     WHERE 1=1
   `;
 
   const params = [];
 
   if (fechaInicio && fechaFin) {
-    query += ' AND m.mov_fecha BETWEEN ? AND ?';
+    query += ' AND m.fecha BETWEEN ? AND ?';
     params.push(fechaInicio, fechaFin);
   }
 
-  query += ' GROUP BY p.pro_codigo, p.pro_nombre ORDER BY p.pro_nombre';
+  query += ' GROUP BY p.codigo, p.nombre ORDER BY p.nombre';
 
   db.all(query, params, (err, rows) => {
     if (err) {
@@ -229,15 +236,15 @@ app.post('/api/vendedor', express.json(), (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     const v = req.body;
     db.run(
-      `INSERT INTO VENDEDOR (ven_NIT, ven_nombre_o_razon_social, ven_direccion, ven_numero_de_contacto, ven_municipio, ven_responsabilidad_fiscal)
+      `INSERT INTO VENDEDOR (NIT, nombre_o_razon_social, direccion, numero_de_contacto, municipio, responsabilidad_fiscal)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        v.ven_NIT,
-        v.ven_nombre_o_razon_social,
-        v.ven_direccion,
-        v.ven_numero_de_contacto,
-        v.ven_municipio,
-        v.ven_responsabilidad_fiscal
+        v.NIT,
+        v.nombre_o_razon_social,
+        v.direccion,
+        v.numero_de_contacto,
+        v.municipio,
+        v.responsabilidad_fiscal
       ],
       function (err2) {
         if (err2) return res.status(500).json({ error: err2.message });
@@ -252,28 +259,28 @@ app.get('/api/reportes', (req, res) => {
   const { producto, fechaInicio, fechaFin } = req.query;
   let query = `
     SELECT
-      dpv.det_nombre_producto AS producto,
-      SUM(dpv.det_monto) AS ingresos,
-      SUM(dpv.det_cantidad * dpv.det_costo_unitario) AS costos,
-      SUM(dpv.det_monto - (dpv.det_cantidad * dpv.det_costo_unitario)) AS utilidades,
-      SUM(dpv.det_IVA_unitario * dpv.det_cantidad) AS iva
+      dpv.nombre_producto AS producto,
+      SUM(dpv.monto) AS ingresos,
+      SUM(dpv.cantidad * dpv.costo_unitario) AS costos,
+      SUM(dpv.monto - (dpv.cantidad * dpv.costo_unitario)) AS utilidades,
+      SUM(dpv.IVA_unitario * dpv.cantidad) AS iva
     FROM DETALLE_PRODUCTO_VENDIDO dpv
-    JOIN VENTA v ON dpv.ven_codigo = v.ven_codigo
+    JOIN VENTA v ON dpv.codigo_venta = v.codigo
     WHERE 1=1`;
 
   const params = [];
 
   if (producto) {
-    query += ' AND dpv.det_nombre_producto = ?';
+    query += ' AND dpv.nombre_producto = ?';
     params.push(producto);
   }
 
   if (fechaInicio && fechaFin) {
-    query += ' AND v.ven_fecha BETWEEN ? AND ?';
+    query += ' AND v.fecha BETWEEN ? AND ?';
     params.push(fechaInicio, fechaFin);
   }
 
-  query += ' GROUP BY dpv.det_nombre_producto';
+  query += ' GROUP BY dpv.nombre_producto';
 
   db.all(query, params, (err, rows) => {
     if (err) {
@@ -287,7 +294,7 @@ app.get('/api/reportes', (req, res) => {
 // Endpoint para obtener productos vendidos
 app.get('/api/productos-vendidos', (req, res) => {
   const query = `
-    SELECT DISTINCT dpv.det_nombre_producto AS nombre
+    SELECT DISTINCT dpv.nombre_producto AS nombre
     FROM DETALLE_PRODUCTO_VENDIDO dpv
     ORDER BY nombre;
   `;
@@ -303,14 +310,14 @@ app.get('/api/productos-vendidos', (req, res) => {
 app.get('/api/historial_ventas', (req, res) => {
   const query = `
     SELECT 
-      ven_codigo AS numero,
-      ven_fecha AS fecha,
-      ven_hora AS hora,
-      ven_nombre_cliente || ' ' || IFNULL(ven_apellido_cliente, '') AS cliente,
-      ven_razon_social_cliente,
-      ven_total AS total
+      codigo AS numero,
+      fecha AS fecha,
+      hora AS hora,
+      nombre_cliente || ' ' || IFNULL(apellido_cliente, '') AS cliente,
+      razon_social_cliente,
+      total AS total
     FROM VENTA
-    ORDER BY ven_fecha DESC, ven_hora DESC
+    ORDER BY fecha DESC, hora DESC
   `;
   db.all(query, [], (err, rows) => {
     if (err) {
@@ -333,14 +340,14 @@ app.get('/api/venta_detalle', (req, res) => {
 
   const query = `
     SELECT 
-      det_nombre_producto,
-      det_cantidad,
-      det_precio_unitario,
-      det_submonto,
-      det_IVA_unitario,
-      det_monto
+      nombre_producto,
+      cantidad,
+      precio_unitario,
+      submonto,
+      IVA_unitario,
+      monto
     FROM DETALLE_PRODUCTO_VENDIDO
-    WHERE ven_codigo = ?
+    WHERE codigo_venta = ?
   `;
   db.all(query, [codigo], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -355,26 +362,26 @@ app.get('/api/venta', (req, res) => {
 
   const query = `
     SELECT 
-      ven_codigo AS numero,
-      ven_fecha AS fecha,
-      ven_hora AS hora,
+      codigo AS numero,
+      fecha AS fecha,
+      hora AS hora,
       -- Si hay razón social, úsala; si no, concatena nombre y apellido
       CASE 
-        WHEN ven_razon_social_cliente IS NOT NULL AND TRIM(ven_razon_social_cliente) != '' THEN ven_razon_social_cliente
-        ELSE TRIM(ven_nombre_cliente || ' ' || IFNULL(ven_apellido_cliente, ''))
+        WHEN razon_social_cliente IS NOT NULL AND TRIM(razon_social_cliente) != '' THEN razon_social_cliente
+        ELSE TRIM(nombre_cliente || ' ' || IFNULL(apellido_cliente, ''))
       END AS cliente,
-      ven_total AS total,
-      ven_direccion_cliente AS direccion_cliente,
-      ven_correo_electronico_cliente AS correo_cliente,
-      ven_numero_telefonico_cliente AS numero_telefonico_cliente,
-      ven_nombre_o_razon_social_vendedor AS vendedor,
-      ven_NIT_vendedor AS nit_vendedor,
-      ven_direccion_vendedor AS direccion_vendedor,
-      ven_numero_de_contacto_vendedor AS contacto_vendedor,
-      ven_municipio_vendedor AS municipio_vendedor,
-      ven_responsabilidad_fiscal_vendedor AS responsabilidad_fiscal_vendedor
+      total AS total,
+      direccion_cliente AS direccion_cliente,
+      correo_electronico_cliente AS correo_cliente,
+      numero_telefonico_cliente AS numero_telefonico_cliente,
+      nombre_o_razon_social_vendedor AS vendedor,
+      NIT_vendedor AS nit_vendedor,
+      direccion_vendedor AS direccion_vendedor,
+      numero_de_contacto_vendedor AS contacto_vendedor,
+      municipio_vendedor AS municipio_vendedor,
+      responsabilidad_fiscal_vendedor AS responsabilidad_fiscal_vendedor
     FROM VENTA
-    WHERE ven_codigo = ?
+    WHERE codigo = ?
   `;
   db.get(query, [codigo], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -384,65 +391,6 @@ app.get('/api/venta', (req, res) => {
   });
 });
 
-// Endpoint: insertar datos de prueba
-app.get('/api/insertar-datos-prueba', (req, res) => {
-  // Insertar productos
-  const productos = [
-    ["P001", "Muñeca inflable", 892399, 90822020, "Muñeca de vinilo", "activo", 0.19],
-    ["P002", "Robot de cocina", 3200000, 45000000, "Robot multifunción", "activo", 0.05]
-  ];
-  const stmtProd = db.prepare('INSERT OR IGNORE INTO PRODUCTO (pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, pro_descripcion, pro_estado, pro_tasa_IVA) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  productos.forEach(p => stmtProd.run(p));
-  stmtProd.finalize();
-
-  // Insertar cliente de prueba (natural)
-  const cliente = [
-    "1234567890", // cli_identificacion
-    "Calle Falsa 123", // cli_direccion
-    "cliente@correo.com", // cli_correo_electronico
-    "Bogotá", // cli_ciudad
-    "3001234567" // cli_numero_telefonico
-  ];
-  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', cliente);
-  db.run('INSERT OR IGNORE INTO CLIENTE_NATURAL (cli_identificacion, cli_tipo_de_documento, cli_nombre, cli_apellido) VALUES (?, ?, ?, ?)', [
-    "1234567890", // cli_identificacion
-    "CC", // cli_tipo_de_documento
-    "Juan Carlos", // cli_nombre
-    "Pérez Gómez" // cli_apellido
-  ]);
-
-  // Insertar cliente de prueba (jurídico)
-  const clienteJuridico = [
-    "900123456", // cli_identificacion (NIT)
-    "Avenida Siempre Viva 742", // cli_direccion
-    "empresa@correo.com", // cli_correo_electronico
-    "Medellín", // cli_ciudad
-    "6041234567" // cli_numero_telefonico
-  ];
-  db.run('INSERT OR IGNORE INTO CLIENTE (cli_identificacion, cli_direccion, cli_correo_electronico, cli_ciudad, cli_numero_telefonico) VALUES (?, ?, ?, ?, ?)', clienteJuridico);
-  db.run('INSERT OR IGNORE INTO CLIENTE_JURIDICO (cli_identificacion, cli_razon_social) VALUES (?, ?)', [
-    "900123456", // cli_identificacion
-    "Soluciones Empresariales S.A.S." // cli_razon_social
-  ]);
-
-  // Insertar venta
-  const ventas = [
-    ["V002", "2025-06-21", "10:49", 181644040, 184550344, "C001", "CC", "Juan", "Pérez", null, "Calle 1", "555-1234", "Bogotá", "juan@mail.com", "Pedro S.A.", "V001", "Calle 2", "555-5678", "Bogotá", "Responsable"]
-  ];
-  const stmtVenta = db.prepare('INSERT OR IGNORE INTO VENTA (ven_codigo, ven_fecha, ven_hora, ven_subtotal, ven_total, ven_identificacion_cliente, ven_tipo_identificacion_cliente, ven_nombre_cliente, ven_apellido_cliente, ven_razon_social_cliente, ven_direccion_cliente, ven_numero_telefonico_cliente, ven_ciudad_cliente, ven_correo_electronico_cliente, ven_nombre_o_razon_social_vendedor, ven_NIT_vendedor, ven_direccion_vendedor, ven_numero_de_contacto_vendedor, ven_municipio_vendedor, ven_responsabilidad_fiscal_vendedor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  ventas.forEach(v => stmtVenta.run(v));
-  stmtVenta.finalize();
-
-  // Insertar detalle
-  const detalles = [
-    ["Argolla analizadora", 23, 90000, 900, 9000, 818272, 289892, "V002"]
-  ];
-  const stmtDet = db.prepare('INSERT OR IGNORE INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-  detalles.forEach(d => stmtDet.run(d));
-  stmtDet.finalize();
-
-  res.json({ ok: true });
-});
 
 // Endpoint para obtener tipos de movimiento de inventario
 app.get('/api/tipos-movimiento', (req, res) => {
@@ -817,8 +765,8 @@ app.post('/api/productos', (req, res) => {
 
   db.run(
     `INSERT INTO PRODUCTO (
-      pro_codigo, pro_nombre, pro_costo_unitario, pro_precio, 
-      pro_descripcion, pro_estado, pro_tasa_IVA
+      codigo, nombre, costo_unitario, precio, 
+      descripcion, estado, tasa_IVA
     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       codigo,
@@ -851,22 +799,15 @@ app.post('/api/productos', (req, res) => {
 app.get('/api/productos', (req, res) => {
   const query = `
     SELECT 
-      p.pro_codigo AS codigo,
-      p.pro_nombre AS nombre,
-      p.pro_precio AS precioUnitario,
-      p.pro_costo_unitario AS costoUnitario,
-      p.pro_descripcion AS descripcion,
-      p.pro_tasa_IVA AS tipoIVA,
-      p.pro_estado AS estado,
-      CASE 
-        WHEN pb.pro_codigo IS NOT NULL THEN 'bien'
-        WHEN ps.pro_codigo IS NOT NULL THEN 'servicio'
-        ELSE 'desconocido'
-      END AS tipoProducto
+      p.codigo AS codigo,
+      p.nombre AS nombre,
+      p.precio AS precioUnitario,
+      p.costo_unitario AS costoUnitario,
+      p.descripcion AS descripcion,
+      p.tasa_IVA AS tipoIVA,
+      p.estado AS estado
     FROM PRODUCTO p
-    LEFT JOIN PRODUCTO_BIEN pb ON p.pro_codigo = pb.pro_codigo
-    LEFT JOIN PRODUCTO_SERVICIO ps ON p.pro_codigo = ps.pro_codigo
-    ORDER BY p.pro_nombre
+    ORDER BY p.nombre
   `;
   
   db.all(query, [], (err, rows) => {
@@ -901,7 +842,7 @@ app.post('/api/venta', express.json(), async (req, res) => {
 
     // Buscar cliente seleccionado
     const cliente = await new Promise((resolve, reject) => {
-      db.get('SELECT * FROM CLIENTE WHERE cli_identificacion = ?', [v.identificacion_cliente], (err, row) => {
+      db.get('SELECT * FROM CLIENTE WHERE identificacion = ?', [v.identificacion_cliente], (err, row) => {
         if (err) reject(err);
         else resolve(row);
       });
@@ -910,12 +851,12 @@ app.post('/api/venta', express.json(), async (req, res) => {
 
     // Buscar si es natural o jurídico
     const clienteNatural = await new Promise((resolve) => {
-      db.get('SELECT * FROM CLIENTE_NATURAL WHERE cli_identificacion = ?', [v.identificacion_cliente], (err, row) => {
+      db.get('SELECT * FROM CLIENTE_NATURAL WHERE identificacion = ?', [v.identificacion_cliente], (err, row) => {
         resolve(row);
       });
     });
     const clienteJuridico = await new Promise((resolve) => {
-      db.get('SELECT * FROM CLIENTE_JURIDICO WHERE cli_identificacion = ?', [v.identificacion_cliente], (err, row) => {
+      db.get('SELECT * FROM CLIENTE_JURIDICO WHERE identificacion = ?', [v.identificacion_cliente], (err, row) => {
         resolve(row);
       });
     });
@@ -934,11 +875,11 @@ app.post('/api/venta', express.json(), async (req, res) => {
     await new Promise((resolve, reject) => {
       db.run(
         `INSERT INTO VENTA (
-          ven_codigo, ven_fecha, ven_hora, ven_subtotal, ven_total,
-          ven_identificacion_cliente, ven_tipo_identificacion_cliente,
-          ven_nombre_cliente, ven_apellido_cliente, ven_razon_social_cliente,
-          ven_direccion_cliente, ven_numero_telefonico_cliente, ven_ciudad_cliente, ven_correo_electronico_cliente,
-          ven_nombre_o_razon_social_vendedor, ven_NIT_vendedor, ven_direccion_vendedor, ven_numero_de_contacto_vendedor, ven_municipio_vendedor, ven_responsabilidad_fiscal_vendedor
+          codigo, fecha, hora, subtotal, total,
+          identificacion_cliente, tipo_identificacion_cliente,
+          nombre_cliente, apellido_cliente, razon_social_cliente,
+          direccion_cliente, numero_telefonico_cliente, ciudad_cliente, correo_electronico_cliente,
+          nombre_o_razon_social_vendedor, NIT_vendedor, direccion_vendedor, numero_de_contacto_vendedor, municipio_vendedor, responsabilidad_fiscal_vendedor
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           codigoVenta,
@@ -947,14 +888,14 @@ app.post('/api/venta', express.json(), async (req, res) => {
           subtotal,
           total,
           v.identificacion_cliente,
-          clienteNatural ? (clienteNatural.cli_tipo_de_documento || 'CC') : 'NIT',
-          clienteNatural ? clienteNatural.cli_nombre : null,
-          clienteNatural ? clienteNatural.cli_apellido : null,
-          clienteJuridico ? clienteJuridico.cli_razon_social : null,
-          cliente.cli_direccion,
-          cliente.cli_numero_telefonico,
-          cliente.cli_ciudad,
-          cliente.cli_correo_electronico,
+          clienteNatural ? (clienteNatural.tipo_de_documento || 'CC') : 'NIT',
+          clienteNatural ? clienteNatural.nombre : null,
+          clienteNatural ? clienteNatural.apellido : null,
+          clienteJuridico ? clienteJuridico.razon_social : null,
+          cliente.direccion,
+          cliente.numero_telefonico,
+          cliente.ciudad,
+          cliente.correo_electronico,
           v.nombre_o_razon_social_vendedor,
           v.NIT_vendedor,
           v.direccion_vendedor,
@@ -970,11 +911,11 @@ app.post('/api/venta', express.json(), async (req, res) => {
     });
 
     // Insertar los productos vendidos (detalle)
-    const stmtDet = db.prepare('INSERT INTO DETALLE_PRODUCTO_VENDIDO (det_nombre_producto, det_cantidad, det_precio_unitario, det_costo_unitario, det_IVA_unitario, det_submonto, det_monto, ven_codigo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    const stmtDet = db.prepare('INSERT INTO DETALLE_PRODUCTO_VENDIDO (nombre_producto, cantidad, precio_unitario, costo_unitario, IVA_unitario, submonto, monto, codigo_venta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
     for (const p of v.productos) {
       // Para asegurar que el costo es el correcto, lo traemos de la BD
       const prodInfo = await new Promise((resolve) => {
-        db.get('SELECT pro_costo_unitario FROM PRODUCTO WHERE pro_nombre = ?', [p.nombre], (err, row) => {
+        db.get('SELECT costo_unitario FROM PRODUCTO WHERE nombre = ?', [p.nombre], (err, row) => {
           resolve(row); // Resuelve con la fila o undefined si no se encuentra
         });
       });
@@ -982,7 +923,7 @@ app.post('/api/venta', express.json(), async (req, res) => {
       const precio = parseFloat(p.precio_unitario) || 0;
       const iva = parseFloat(p.IVA_unitario) || 0;
       const cantidad = parseFloat(p.cantidad) || 0;
-      const costo = prodInfo ? (parseFloat(prodInfo.pro_costo_unitario) || 0) : 0;
+      const costo = prodInfo ? (parseFloat(prodInfo.costo_unitario) || 0) : 0;
       const submonto = precio * cantidad;
       const monto = (precio + iva) * cantidad;
       stmtDet.run(
@@ -999,27 +940,26 @@ app.post('/api/venta', express.json(), async (req, res) => {
     stmtDet.finalize();
 
     // Registrar movimientos de inventario (salida por venta)
-    // Buscar el tip_codigo para "Venta de productos"
+    // Buscar el codigo para "Venta de productos"
     const tipCodigoVenta = await new Promise((resolve, reject) => {
-      db.get("SELECT tip_codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_tipo_flujo = 'Salida' AND tip_nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
+      db.get("SELECT codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tipo_flujo = 'Salida' AND nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
         if (err) reject(err);
-        else resolve(row ? row.tip_codigo : null);
+        else resolve(row ? row.codigo : null);
       });
     });
     if (!tipCodigoVenta) {
       return res.status(500).json({ error: 'No se encontró el tipo de movimiento para venta.' });
     }
-    const fechaHoy = new Date().toISOString().slice(0, 10);
-    const stmtMov = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (mov_fecha, mov_cantidad, tip_codigo, pro_codigo) VALUES (?, ?, ?, ?)');
+    const stmtMov = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (fecha, cantidad, codigo_tipo_movimiento, codigo_producto) VALUES (?, ?, ?, ?)');
     for (const p of v.productos) {
       // Buscar el código del producto
       const prod = await new Promise((resolve) => {
-        db.get('SELECT pro_codigo FROM PRODUCTO WHERE pro_nombre = ?', [p.nombre], (err, row) => {
+        db.get('SELECT codigo FROM PRODUCTO WHERE nombre = ?', [p.nombre], (err, row) => {
           resolve(row);
         });
       });
-      if (prod && prod.pro_codigo) {
-        stmtMov.run(fechaHoy, Number(p.cantidad), tipCodigoVenta, prod.pro_codigo);
+      if (prod && prod.codigo) {
+        stmtMov.run(v.fecha, Number(p.cantidad), tipCodigoVenta, prod.codigo);
       }
     }
     stmtMov.finalize();
@@ -1037,30 +977,30 @@ app.delete('/api/venta/:codigo', async (req, res) => {
     // Eliminar movimientos de inventario asociados a la venta
     // Primero obtener los productos de la venta
     const productos = await new Promise((resolve, reject) => {
-      db.all('SELECT det_nombre_producto, det_cantidad FROM DETALLE_PRODUCTO_VENDIDO WHERE ven_codigo = ?', [codigo], (err, rows) => {
+      db.all('SELECT nombre_producto, cantidad FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?', [codigo], (err, rows) => {
         if (err) reject(err);
         else resolve(rows);
       });
     });
-    // Buscar tip_codigo para "Venta de productos"
+    // Buscar codigo para "Venta de productos"
     const tipCodigoVenta = await new Promise((resolve, reject) => {
-      db.get("SELECT tip_codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tip_tipo_flujo = 'Salida' AND tip_nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
+      db.get("SELECT codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tipo_flujo = 'Salida' AND nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
         if (err) reject(err);
-        else resolve(row ? row.tip_codigo : null);
+        else resolve(row ? row.codigo : null);
       });
     });
     if (tipCodigoVenta) {
       for (const p of productos) {
         // Buscar el código del producto
         const prod = await new Promise((resolve) => {
-          db.get('SELECT pro_codigo FROM PRODUCTO WHERE pro_nombre = ?', [p.det_nombre_producto], (err, row) => {
+          db.get('SELECT codigo FROM PRODUCTO WHERE nombre = ?', [p.nombre_producto], (err, row) => {
             resolve(row);
           });
         });
-        if (prod && prod.pro_codigo) {
+        if (prod && prod.codigo) {
           // Eliminar movimientos de inventario de salida por venta para este producto y venta
           await new Promise((resolve, reject) => {
-            db.run('DELETE FROM MOVIMIENTO_INVENTARIO WHERE pro_codigo = ? AND tip_codigo = ? AND mov_cantidad = ? AND mov_fecha = (SELECT ven_fecha FROM VENTA WHERE ven_codigo = ?)', [prod.pro_codigo, tipCodigoVenta, p.det_cantidad, codigo], function(err) {
+            db.run('DELETE FROM MOVIMIENTO_INVENTARIO WHERE codigo_producto = ? AND codigo_tipo_movimiento = ? AND cantidad = ? AND fecha = (SELECT fecha FROM VENTA WHERE codigo = ?)', [prod.codigo, tipCodigoVenta, p.cantidad, codigo], function(err) {
               if (err) reject(err);
               else resolve();
             });
@@ -1070,14 +1010,14 @@ app.delete('/api/venta/:codigo', async (req, res) => {
     }
     // Eliminar detalle de productos vendidos
     await new Promise((resolve, reject) => {
-      db.run('DELETE FROM DETALLE_PRODUCTO_VENDIDO WHERE ven_codigo = ?', [codigo], function(err) {
+      db.run('DELETE FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?', [codigo], function(err) {
         if (err) reject(err);
         else resolve();
       });
     });
     // Eliminar la venta
     await new Promise((resolve, reject) => {
-      db.run('DELETE FROM VENTA WHERE ven_codigo = ?', [codigo], function(err) {
+      db.run('DELETE FROM VENTA WHERE codigo = ?', [codigo], function(err) {
         if (err) reject(err);
         else resolve();
       });
@@ -1093,12 +1033,9 @@ app.delete('/api/productos/:codigo', (req, res) => {
   const { codigo } = req.params;
   
   db.serialize(() => {
-    // Eliminar de las tablas específicas primero
-    db.run('DELETE FROM PRODUCTO_BIEN WHERE pro_codigo = ?', [codigo]);
-    db.run('DELETE FROM PRODUCTO_SERVICIO WHERE pro_codigo = ?', [codigo]);
-    
+
     // Luego eliminar de la tabla principal
-    db.run('DELETE FROM PRODUCTO WHERE pro_codigo = ?', [codigo], function(err) {
+    db.run('DELETE FROM PRODUCTO WHERE codigo = ?', [codigo], function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -1131,8 +1068,8 @@ app.put('/api/productos/:codigo', (req, res) => {
 
   db.run(
     `UPDATE PRODUCTO
-     SET pro_nombre = ?, pro_costo_unitario = ?, pro_precio = ?, pro_descripcion = ?, pro_estado = ?, pro_tasa_IVA = ?
-     WHERE pro_codigo = ?`,
+     SET nombre = ?, costo_unitario = ?, precio = ?, descripcion = ?, estado = ?, tasa_IVA = ?
+     WHERE codigo = ?`,
     [nombre, costoUnitario, precioUnitario, descripcion || '', estado, tasaIVA, codigo],
     function(err) {
       if (err) {

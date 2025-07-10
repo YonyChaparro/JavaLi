@@ -202,17 +202,17 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
                 </tr>
               ) : (
                 movimientos.map((movimiento) => (
-                  <tr key={movimiento.mov_id} className="hover:bg-gray-50">
+                  <tr key={movimiento.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(movimiento.mov_fecha).toLocaleDateString('es-CO')}
+                      {new Date(movimiento.fecha).toISOString().slice(0, 10)} {/* Formato YYYY-MM-DD */}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {movimiento.producto}
                     </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                      movimiento.tip_tipo_flujo === 'Entrada' ? 'text-green-600' : 'text-red-600'
+                      movimiento.tipo_flujo === 'Entrada' ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {movimiento.tip_tipo_flujo === 'Entrada' ? '+' : '-'}{movimiento.mov_cantidad}
+                      {movimiento.tipo_flujo === 'Entrada' ? '+' : '-'}{movimiento.cantidad}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {movimiento.tipo_movimiento}

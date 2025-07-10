@@ -5,7 +5,7 @@ export default function Inventario({ onClose , onBack }) {
   const [productos, setProductos] = useState([]);
   const [tiposMovimiento, setTiposMovimiento] = useState([]);
   const [filas, setFilas] = useState([
-    { codigo: '', cantidad: '', tip_codigo: '' }
+    { codigo: '', cantidad: '', codigo_tipo_movimiento: '' }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -36,7 +36,7 @@ export default function Inventario({ onClose , onBack }) {
   };
 
   const handleAgregarFila = () => {
-    setFilas(filas => [...filas, { codigo: '', cantidad: '', tip_codigo: '' }]);
+    setFilas(filas => [...filas, { codigo: '', cantidad: '', codigo_tipo_movimiento: '' }]);
   };
 
   const handleEliminarFila = idx => {
@@ -48,7 +48,7 @@ export default function Inventario({ onClose , onBack }) {
     setError(null);
     setSuccess(false);
     try {
-      const movimientosData = filas.filter(f => f.codigo && f.cantidad > 0 && f.tip_codigo);
+      const movimientosData = filas.filter(f => f.codigo && f.cantidad > 0 && f.codigo_tipo_movimiento);
       if (movimientosData.length === 0) {
         setError('No hay movimientos válidos para guardar.');
         setLoading(false);
@@ -57,7 +57,7 @@ export default function Inventario({ onClose , onBack }) {
       
       const combinaciones = new Set();
       for (const mov of movimientosData) {
-        const clave = mov.codigo + '|' + mov.tip_codigo;
+        const clave = mov.codigo + '|' + mov.codigo_tipo_movimiento;
         if (combinaciones.has(clave)) {
           setError('No puede haber dos filas con el mismo producto y el mismo tipo de movimiento.');
           setLoading(false);
@@ -67,13 +67,13 @@ export default function Inventario({ onClose , onBack }) {
       }
 
       for (const mov of movimientosData) {
-        const tipo = tiposMovimiento.find(t => String(t.tip_codigo) === String(mov.tip_codigo));
+        const tipo = tiposMovimiento.find(t => String(t.codigo) === String(mov.codigo_tipo_movimiento));
         if (
           tipo &&
-          (tipo.tip_nombre &&
-            (tipo.tip_nombre.toLowerCase().includes('salida') ||
-             tipo.tip_nombre.toLowerCase().includes('deterioro') ||
-             tipo.tip_nombre.toLowerCase().includes('venta')))
+          (tipo.nombre &&
+            (tipo.nombre.toLowerCase().includes('salida') ||
+             tipo.nombre.toLowerCase().includes('deterioro') ||
+             tipo.nombre.toLowerCase().includes('venta')))
         ) {
           const resp = await fetch(`http://localhost:3000/api/existencias/${encodeURIComponent(mov.codigo)}`);
           if (!resp.ok) {
@@ -91,9 +91,9 @@ export default function Inventario({ onClose , onBack }) {
       }
 
       const payload = movimientosData.map(mov => ({
-        pro_codigo: mov.codigo,
+        codigo_producto: mov.codigo,
         cantidad: mov.cantidad,
-        tip_codigo: mov.tip_codigo,
+        codigo_tipo_movimiento: mov.codigo_tipo_movimiento,
       }));
 
       const resp = await fetch('http://localhost:3000/api/movimientos-inventario', {
@@ -104,7 +104,7 @@ export default function Inventario({ onClose , onBack }) {
       if (resp.ok) {
         setSuccess(true);
         setTimeout(() => setSuccess(false), 2000);
-        setFilas([{ codigo: '', cantidad: '', tip_codigo: '' }]);
+        setFilas([{ codigo: '', cantidad: '', codigo_tipo_movimiento: '' }]);
       } else {
         setError('Error al guardar los movimientos.');
       }
@@ -115,8 +115,8 @@ export default function Inventario({ onClose , onBack }) {
   };
 
   const getTipoFlujo = (tipCodigo) => {
-    const tipo = tiposMovimiento.find(t => String(t.tip_codigo) === String(tipCodigo));
-    return tipo ? tipo.tip_tipo_flujo : '';
+    const tipo = tiposMovimiento.find(t => String(t.codigo) === String(tipCodigo));
+    return tipo ? tipo.tipo_flujo : '';
   };
 
   return (
@@ -173,14 +173,14 @@ export default function Inventario({ onClose , onBack }) {
             {filas.map((fila, idx) => {
               const combosUsados = filas
                 .filter((_, i) => i !== idx)
-                .map(f => `${f.codigo}|${f.tip_codigo}`);
+                .map(f => `${f.codigo}|${f.codigo_tipo_movimiento}`);
 
               const productosDisponibles = productos.filter(p => 
-                  !combosUsados.includes(`${p.codigo}|${fila.tip_codigo}`) || p.codigo === fila.codigo
+                  !combosUsados.includes(`${p.codigo}|${fila.codigo_tipo_movimiento}`) || p.codigo === fila.codigo
               );
 
               const movimientosDisponibles = tiposMovimiento.filter(m => 
-                  !combosUsados.includes(`${fila.codigo}|${m.tip_codigo}`) || m.tip_codigo === fila.tip_codigo
+                  !combosUsados.includes(`${fila.codigo}|${m.codigo}`) || m.codigo === fila.codigo_tipo_movimiento
               );
 
               return (
@@ -211,19 +211,19 @@ export default function Inventario({ onClose , onBack }) {
                   <td className="py-3 px-4">
                     <select
                       className={`block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                      value={fila.tip_codigo}
-                      onChange={e => handleChange(idx, 'tip_codigo', e.target.value)}
+                      value={fila.codigo_tipo_movimiento}
+                      onChange={e => handleChange(idx, 'codigo_tipo_movimiento', e.target.value)}
                       required
                     >
                       <option value="">Seleccione movimiento</option>
                       {movimientosDisponibles.map(m => (
-                        <option key={m.tip_codigo} value={m.tip_codigo}>{m.tip_nombre}</option>
+                        <option key={m.codigo} value={m.codigo}>{m.nombre}</option>
                       ))}
                     </select>
                   </td>
                   <td className="py-3 px-4">
                     <div className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50">
-                      {getTipoFlujo(fila.tip_codigo) || '-'}
+                      {getTipoFlujo(fila.codigo_tipo_movimiento) || '-'}
                     </div>
                   </td>
                   <td className="py-3 px-4">
