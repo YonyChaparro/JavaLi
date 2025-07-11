@@ -74,43 +74,48 @@ const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave })
     setSubmitMessage({ type: '', text: '' });
 
     if (!validateForm()) {
-      return;
+        return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const productoData = {
-        codigo: formData.codigo || `PROD-${Date.now()}`,
-        nombre: formData.nombre,
-        costoUnitario: parseFloat(formData.costoUnitario),
-        precioUnitario: parseFloat(formData.precioUnitario),
-        descripcion: formData.descripcion,
-        exentoIVA: formData.exentoIVA,
-        tipoIVA: formData.tipoIVA
-      };
+        const productoData = {
+            codigo: formData.codigo || `PROD-${Date.now()}`,
+            nombre: formData.nombre,
+            costoUnitario: parseFloat(formData.costoUnitario),
+            precioUnitario: parseFloat(formData.precioUnitario),
+            descripcion: formData.descripcion,
+            exentoIVA: formData.exentoIVA,
+            tipoIVA: formData.tipoIVA
+        };
 
-      const response = await fetch(`/api/productos${productoEditado ? '/' + productoData.codigo : ''}`, {
-        method: productoEditado ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(productoData)
-      });
+        // Verifica que todos los campos requeridos estén presentes
+        if (!productoData.nombre || !productoData.costoUnitario || !productoData.precioUnitario) {
+            throw new Error('Faltan campos obligatorios');
+        }
 
-      const data = await response.json();
+        const response = await fetch(`/api/productos${productoEditado ? '/' + productoData.codigo : ''}`, {
+            method: productoEditado ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(productoData)
+        });
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al guardar el producto');
-      }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error al guardar el producto');
+        }
 
-      setSubmitMessage({ type: 'success', text: productoEditado ? 'Producto actualizado exitosamente' : 'Producto creado exitosamente' });
-      onSave(data);
+        const data = await response.json();
+        setSubmitMessage({ type: 'success', text: productoEditado ? 'Producto actualizado exitosamente' : 'Producto creado exitosamente' });
+        onSave(data);
     } catch (error) {
-      console.error('Error:', error);
-      setSubmitMessage({ type: 'error', text: error.message });
+        console.error('Error:', error);
+        setSubmitMessage({ type: 'error', text: error.message || 'Error desconocido al guardar el producto' });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
 
