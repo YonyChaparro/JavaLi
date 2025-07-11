@@ -129,19 +129,19 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     const clienteDiv = docHTML.querySelector('.cliente');
     if (clienteDiv) {
         const clienteDivs = clienteDiv.querySelectorAll('div');
-        const clienteNombre = venta.ven_nombre_cliente && venta.ven_apellido_cliente
-            ? `${venta.ven_nombre_cliente} ${venta.ven_apellido_cliente}`
-            : (venta.ven_razon_social_cliente || venta.cliente || '');
+        const clienteNombre = venta.nombre_cliente && venta.apellido_cliente
+            ? `${venta.nombre_cliente} ${venta.apellido_cliente}`
+            : (venta.razon_social_cliente || venta.cliente || '');
         if (clienteDivs[1]) clienteDivs[1].textContent = clienteNombre;
-        if (clienteDivs[2]) clienteDivs[2].textContent = `Dirección: ${venta.ven_direccion_cliente || venta.direccion_cliente || ''}`;
-        if (clienteDivs[3]) clienteDivs[3].textContent = `Correo: ${venta.ven_correo_electronico_cliente || venta.correo_cliente || ''}`;
+        if (clienteDivs[2]) clienteDivs[2].textContent = `Dirección: ${venta.direccion_cliente || venta.direccion_cliente || ''}`;
+        if (clienteDivs[3]) clienteDivs[3].textContent = `Correo: ${venta.correo_electronico_cliente || venta.correo_cliente || ''}`;
         if (clienteDivs[4]) clienteDivs[4].textContent = `Teléfono: ${venta.telefono_cliente || ''}`;
     }
 
     const datosFactura = docHTML.querySelectorAll('.datos-factura .dato');
-    if (datosFactura[0]) datosFactura[0].innerHTML = `<strong>Factura No.:</strong> ${venta.ven_codigo || venta.numero || ''}`;
-    if (datosFactura[1]) datosFactura[1].innerHTML = `<strong>Fecha:</strong> ${venta.ven_fecha || venta.fecha || ''}`;
-    if (datosFactura[2]) datosFactura[2].innerHTML = `<strong>Hora:</strong> ${venta.ven_hora || venta.hora || ''}`;
+    if (datosFactura[0]) datosFactura[0].innerHTML = `<strong>Factura No.:</strong> ${venta.codigo || venta.numero || ''}`;
+    if (datosFactura[1]) datosFactura[1].innerHTML = `<strong>Fecha:</strong> ${venta.fecha || venta.fecha || ''}`;
+    if (datosFactura[2]) datosFactura[2].innerHTML = `<strong>Hora:</strong> ${venta.hora || venta.hora || ''}`;
 
     const tbody = docHTML.querySelector('.productos-table tbody');
     if (tbody) {
@@ -150,17 +150,17 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
         productos.forEach(p => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${p.det_nombre_producto}</td>
-                <td>${p.det_cantidad}</td>
-                <td>$${Number(p.det_precio_unitario).toFixed(2)}</td>
-                <td>$${Number(p.det_IVA_unitario).toFixed(2)}</td>
-                <td>$${Number(p.det_submonto).toFixed(2)}</td>
-                <td>$${Number(p.det_monto).toFixed(2)}</td>
+                <td>${p.nombre_producto}</td>
+                <td>${p.cantidad}</td>
+                <td>$${Number(p.precio_unitario).toFixed(2)}</td>
+                <td>$${Number(p.IVA_unitario).toFixed(2)}</td>
+                <td>$${Number(p.submonto).toFixed(2)}</td>
+                <td>$${Number(p.monto).toFixed(2)}</td>
             `;
             tbody.appendChild(tr);
-            subtotal += Number(p.det_submonto);
-            totalIVA += Number(p.det_IVA_unitario) * Number(p.det_cantidad);
-            total += Number(p.det_monto);
+            subtotal += Number(p.submonto);
+            totalIVA += Number(p.IVA_unitario) * Number(p.cantidad);
+            total += Number(p.monto);
         });
         const totales = docHTML.querySelectorAll('.totales .linea');
         if (totales[0]) totales[0].innerHTML = `Subtotal: <strong>$${subtotal.toFixed(2)}</strong>`;
@@ -200,7 +200,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     const pdfHeight = height * 0.75;
     const doc = new jsPDF({ orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait', unit: 'pt', format: [pdfWidth, pdfHeight] });
     doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    const nombreArchivo = `venta_${venta.numero || venta.ven_codigo || 'factura'}.pdf`;
+    const nombreArchivo = `venta_${venta.numero || venta.codigo || 'factura'}.pdf`;
     doc.save(nombreArchivo);
     setTimeout(() => iframe.remove(), 500);
 }
@@ -258,15 +258,15 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
           </thead>
           <tbody>
             {productos.map((p, idx) => {
-              const precio = parseFloat(p.det_precio_unitario) || 0;
-              const iva = parseFloat(p.det_IVA_unitario) || 0;
-              const cantidad = parseFloat(p.det_cantidad) || 0;
+              const precio = parseFloat(p.precio_unitario) || 0;
+              const iva = parseFloat(p.IVA_unitario) || 0;
+              const cantidad = parseFloat(p.cantidad) || 0;
               const subtotalProd = (precio * cantidad).toFixed(2);
               const totalProd = ((precio + iva) * cantidad).toFixed(2);
               return (
                 <tr key={idx} className="border-t border-gray-200 hover:bg-gray-50">
-                  <td className="py-2 px-3">{p.det_nombre_producto}</td>
-                  <td className="py-2 px-3 text-center">{p.det_cantidad}</td>
+                  <td className="py-2 px-3">{p.nombre_producto}</td>
+                  <td className="py-2 px-3 text-center">{p.cantidad}</td>
                   <td className="py-2 px-3 text-right">${precio.toFixed(2)}</td>
                   <td className="py-2 px-3 text-right">${iva.toFixed(2)}</td>
                   <td className="py-2 px-3 text-right font-medium">${subtotalProd}</td>
@@ -287,8 +287,8 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
           {(() => {
             let subtotal = 0, total = 0;
             productos.forEach(p => {
-              subtotal += Number(p.det_submonto);
-              total += Number(p.det_monto);
+              subtotal += Number(p.submonto);
+              total += Number(p.monto);
             });
             return (
               <>

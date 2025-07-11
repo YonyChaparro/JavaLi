@@ -123,7 +123,7 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
             >
               <option value="">Todos los productos</option>
               {productosDisponibles.map(p => (
-                <option key={p.prod_codigo} value={p.prod_codigo}>{p.prod_nombre}</option>
+                <option key={p.codigo} value={p.codigo}>{p.nombre}</option>
               ))}
             </select>
           </div>
@@ -138,7 +138,7 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
             >
               <option value="">Todos los tipos</option>
               {tiposMovimientoDisponibles.map(tm => (
-                <option key={tm.tip_codigo} value={tm.tip_codigo}>{tm.tip_nombre}</option>
+                <option key={tm.codigo_tipo_movimiento} value={tm.codigo_tipo_movimiento}>{tm.nombre}</option>
               ))}
             </select>
           </div>
@@ -227,16 +227,16 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
               </tr>
             ) : (
               movimientos.map((movimiento) => (
-                <tr key={movimiento.mov_id} className="hover:bg-gray-50">
+                <tr key={movimiento.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(movimiento.mov_fecha).toLocaleDateString('es-CO')}
+                    {new Date(movimiento.fecha).toISOString().slice(0, 10)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {movimiento.producto}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${movimiento.tip_tipo_flujo === 'Entrada' ? 'text-green-600' : 'text-red-600'
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${movimiento.tipo_flujo === 'Entrada' ? 'text-green-600' : 'text-red-600'
                     }`}>
-                    {movimiento.tip_tipo_flujo === 'Entrada' ? '+' : '-'}{movimiento.mov_cantidad}
+                    {movimiento.tipo_flujo === 'Entrada' ? '+' : '-'}{movimiento.cantidad}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {movimiento.tipo_movimiento}

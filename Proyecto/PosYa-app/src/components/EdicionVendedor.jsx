@@ -2,26 +2,26 @@ import React, { useEffect, useState } from 'react';
 
 // Modelo/Schema del vendedor
 const vendedorSchema = {
-  ven_NIT: {
+  NIT: {
     label: 'NIT',
     type: 'text',
     required: true,
     validation: value => /^\d{9}-\d$/.test(value), // Formato NIT colombiano: 123456789-1
     errorMessage: 'Formato de NIT inválido (ej: 123456789-1)'
   },
-  ven_nombre_o_razon_social: {
+  nombre_o_razon_social: {
     label: 'Nombre o Razón Social',
     type: 'text',
     required: true,
     maxLength: 100
   },
-  ven_direccion: {
+  direccion: {
     label: 'Dirección',
     type: 'text',
     required: true,
     maxLength: 150
   },
-  ven_numero_de_contacto: {
+  numero_de_contacto: {
     label: 'Número de Contacto',
     type: 'tel',
     pattern: '(\\+57\\s?3[0-9]{2}\\s?[0-9]{3}\\s?[0-9]{4}|3[0-9]{2}\s?[0-9]{3}\s?[0-9]{4})',
@@ -29,13 +29,13 @@ const vendedorSchema = {
     maxLength: 17,
     validation: value => /^(\+57\s?)?3[0-9]{2}\s?[0-9]{3}\s?[0-9]{4}$/.test(value)
   },
-  ven_municipio: {
+  municipio: {
     label: 'Municipio',
     type: 'text',
     required: true,
     maxLength: 50
   },
-  ven_responsabilidad_fiscal: {
+  responsabilidad_fiscal: {
     label: 'Responsabilidad Fiscal',
     type: 'text',
     required: true,

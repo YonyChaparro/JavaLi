@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 // Modelo/Schema del tipo de movimiento
 const tipoMovimientoSchema = {
-  tip_nombre: {
+  nombre: {
     label: 'Nombre',
     type: 'text',
     required: true,
@@ -10,7 +10,7 @@ const tipoMovimientoSchema = {
     maxLength: 50,
     errorMessage: 'El nombre debe tener entre 3 y 50 caracteres.'
   },
-  tip_tipo_flujo: {
+  tipo_flujo: {
     label: 'Tipo de flujo',
     type: 'select',
     required: true,
@@ -29,7 +29,7 @@ export default function CrearTipoMovimiento({ onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Reinicia el formulario cada vez que se muestre el modal
   useEffect(() => {
@@ -115,8 +115,8 @@ export default function CrearTipoMovimiento({ onClose, onSuccess }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tip_nombre: form.tip_nombre.trim(),
-          tip_tipo_flujo: form.tip_tipo_flujo
+          nombre: form.nombre.trim(),
+          tipo_flujo: form.tipo_flujo
         })
       });
 

@@ -180,12 +180,12 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
           productos,
           subtotal,
           total,
-          nombre_o_razon_social_vendedor: vendedor.ven_nombre_o_razon_social,
-          NIT_vendedor: vendedor.ven_NIT,
-          direccion_vendedor: vendedor.ven_direccion,
-          numero_de_contacto_vendedor: vendedor.ven_numero_de_contacto,
-          municipio_vendedor: vendedor.ven_municipio,
-          responsabilidad_fiscal_vendedor: vendedor.ven_responsabilidad_fiscal
+          nombre_o_razon_social_vendedor: vendedor.nombre_o_razon_social,
+          NIT_vendedor: vendedor.NIT,
+          direccion_vendedor: vendedor.direccion,
+          numero_de_contacto_vendedor: vendedor.numero_de_contacto,
+          municipio_vendedor: vendedor.municipio,
+          responsabilidad_fiscal_vendedor: vendedor.responsabilidad_fiscal
         })
       });
 
@@ -285,13 +285,13 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">Vendedor</label>
               <div className="font-medium text-gray-800"> {/* Added text-gray-800 */}
-                {vendedor.ven_nombre_o_razon_social}
+                {vendedor.nombre_o_razon_social}
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">NIT Vendedor</label>
               <div className="font-medium text-gray-800"> {/* Added text-gray-800 */}
-                {vendedor.ven_NIT}
+                {vendedor.NIT}
               </div>
             </div>
           </div>
