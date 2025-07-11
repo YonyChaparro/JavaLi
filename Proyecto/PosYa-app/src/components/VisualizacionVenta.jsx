@@ -311,14 +311,14 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+          className="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors shadow"
         >
           <FiChevronLeft className="mr-2" />
           Volver
         </button>
         <button
           onClick={() => generarPDFVenta(venta, productos)}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold flex items-center"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-semibold flex items-center shadow"
         >
           <FiDownload className="mr-2" />
           Generar factura ordinaria
@@ -327,7 +327,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
           type="button"
           disabled={eliminando}
           onClick={() => setShowConfirmDelete(true)}
-          className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-semibold transition-colors disabled:opacity-60"
+          className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-semibold transition-colors disabled:opacity-60 shadow"
         >
           <FiTrash2 className="mr-2" />
           Eliminar

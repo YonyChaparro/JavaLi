@@ -140,9 +140,9 @@ const ListaProductos = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className={`bg-white rounded-lg shadow-md p-6 relative transition-all duration-300 ${productoSeleccionado ? 'pb-0 mb-0 min-h-[700px]' : ''}`}> 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Productos Registrados</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mr-40">Productos Registrados</h2>
         <div className="flex space-x-2">
           <button 
             onClick={onBack}
@@ -192,40 +192,48 @@ const ListaProductos = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {productosPaginaActual.map(producto => (
-              <tr 
-                key={producto.codigo} 
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => setProductoSeleccionado(producto)}
-              >
-                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{producto.codigo}</div></td>
-                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{producto.nombre}</div></td>
-                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{formatearPrecio(producto.precioUnitario)}</div></td>
-                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{producto.tipoIVA}%</div></td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditProduct(producto);
-                    }}
-                    className="text-blue-600 hover:text-blue-900 mr-4"
-                    title="Editar producto"
-                  >
-                    <FiEdit2 />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleShowConfirmDelete(producto);
-                    }}
-                    className="text-red-600 hover:text-red-900"
-                    title="Eliminar producto"
-                  >
-                    <FiTrash2 />
-                  </button>
+            {productosPaginaActual.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                  No hay productos registrados
                 </td>
               </tr>
-            ))}
+            ) : (
+              productosPaginaActual.map(producto => (
+                <tr 
+                  key={producto.codigo} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setProductoSeleccionado(producto)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{producto.codigo}</div></td>
+                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{producto.nombre}</div></td>
+                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{formatearPrecio(producto.precioUnitario)}</div></td>
+                  <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{producto.tipoIVA}%</div></td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(producto);
+                      }}
+                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      title="Editar producto"
+                    >
+                      <FiEdit2 />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShowConfirmDelete(producto);
+                      }}
+                      className="text-red-600 hover:text-red-900"
+                      title="Eliminar producto"
+                    >
+                      <FiTrash2 />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -266,82 +274,76 @@ const ListaProductos = ({
       )}
 
       {productoSeleccionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start">
-                <h3 className="text-lg font-medium text-gray-900">Detalle del Producto</h3>
-                <button
-                  onClick={() => setProductoSeleccionado(null)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="mt-4 space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Código</h4>
-                  <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.codigo}</p>
+        <div className="absolute left-0 top-0 w-full h-full flex items-start justify-center z-40 bg-black bg-opacity-10">
+          <div className="w-full max-w-md mt-10">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-lg font-medium text-gray-900">Detalle del Producto</h3>
+                  <button
+                    onClick={() => setProductoSeleccionado(null)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Nombre</h4>
-                  <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.nombre}</p>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Estado</h4>
-                  <p className="mt-1 text-sm text-gray-900 capitalize">{productoSeleccionado.estado}</p>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">IVA</h4>
-                  <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.tipoIVA}%</p>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Precio Unitario</h4>
-                  <p className="mt-1 text-sm text-gray-900">{formatearPrecio(productoSeleccionado.precioUnitario)}</p>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Costo Unitario</h4>
-                  <p className="mt-1 text-sm text-gray-900">{formatearPrecio(productoSeleccionado.costoUnitario)}</p>
-                </div>
-
-                {productoSeleccionado.descripcion && (
+                <div className="mt-4 space-y-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500">Descripción</h4>
-                    <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.descripcion}</p>
+                    <h4 className="text-sm font-medium text-gray-500">Código</h4>
+                    <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.codigo}</p>
                   </div>
-                )}
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onEditProduct(productoSeleccionado);
-                    setProductoSeleccionado(null);
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                >
-                  <FiEdit2 className="inline mr-2" />
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleShowConfirmDelete(productoSeleccionado);
-                  }}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                >
-                  <FiTrash2 className="inline mr-2" />
-                  Eliminar
-                </button>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Nombre</h4>
+                    <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.nombre}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Estado</h4>
+                    <p className="mt-1 text-sm text-gray-900 capitalize">{productoSeleccionado.estado}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">IVA</h4>
+                    <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.tipoIVA}%</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Precio Unitario</h4>
+                    <p className="mt-1 text-sm text-gray-900">{formatearPrecio(productoSeleccionado.precioUnitario)}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Costo Unitario</h4>
+                    <p className="mt-1 text-sm text-gray-900">{formatearPrecio(productoSeleccionado.costoUnitario)}</p>
+                  </div>
+                  {productoSeleccionado.descripcion && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">Descripción</h4>
+                      <p className="mt-1 text-sm text-gray-900">{productoSeleccionado.descripcion}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEditProduct(productoSeleccionado);
+                      setProductoSeleccionado(null);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                  >
+                    <FiEdit2 className="inline mr-2" />
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleShowConfirmDelete(productoSeleccionado);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                  >
+                    <FiTrash2 className="inline mr-2" />
+                    Eliminar
+                  </button>
+                </div>
               </div>
             </div>
           </div>

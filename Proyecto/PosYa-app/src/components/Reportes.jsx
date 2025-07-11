@@ -304,67 +304,71 @@ export default function Reportes({ onClose, onBack }) {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Producto
-                    </th>
-                    {filtros.ingresos && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ingresos
+            {reporte.length === 0 ? (
+              <div className="text-center text-gray-500 text-lg py-8">No hay ventas registradas</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table ref={tableRef} className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Producto
                       </th>
-                    )}
-                    {filtros.costos && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Costos
-                      </th>
-                    )}
-                    {filtros.utilidades && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Utilidades
-                      </th>
-                    )}
-                    {filtros.iva && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        IVA
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {reporte.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {item.producto}
-                      </td>
                       {filtros.ingresos && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                          {formatearPrecio(item.ingresos)}
-                        </td>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Ingresos
+                        </th>
                       )}
                       {filtros.costos && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                          {formatearPrecio(item.costos)}
-                        </td>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Costos
+                        </th>
                       )}
                       {filtros.utilidades && (
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${item.utilidades >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                          {formatearPrecio(item.utilidades)}
-                        </td>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Utilidades
+                        </th>
                       )}
                       {filtros.iva && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                          {formatearPrecio(item.iva)}
-                        </td>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          IVA
+                        </th>
                       )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {reporte.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {item.producto}
+                        </td>
+                        {filtros.ingresos && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                            {formatearPrecio(item.ingresos)}
+                          </td>
+                        )}
+                        {filtros.costos && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                            {formatearPrecio(item.costos)}
+                          </td>
+                        )}
+                        {filtros.utilidades && (
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${item.utilidades >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                            {formatearPrecio(item.utilidades)}
+                          </td>
+                        )}
+                        {filtros.iva && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                            {formatearPrecio(item.iva)}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>

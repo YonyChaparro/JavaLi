@@ -53,6 +53,7 @@ export default function EdicionVendedor({ onClose }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+  const [noVendedor, setNoVendedor] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
@@ -62,16 +63,39 @@ export default function EdicionVendedor({ onClose }) {
         const resp = await fetch('http://localhost:3000/api/vendedor');
         if (resp.ok) {
           const vendedor = await resp.json();
-          if (vendedor) {
+          if (vendedor && Object.keys(vendedor).length > 0) {
             setForm(vendedor);
+            setNoVendedor(false);
+          } else {
+            setNoVendedor(true);
+            setError(null);
           }
         } else {
-          // If no vendor data exists, treat it as a new entry
-          console.log("No existing vendor data found, ready for creation.");
+          // Intenta leer el mensaje de error del backend
+          let backendMsg = '';
+          try {
+            const data = await resp.json();
+            backendMsg = data?.message?.toLowerCase?.() || '';
+          } catch {}
+          if (resp.status === 404 || backendMsg.includes('no existe') || backendMsg.includes('not found') || backendMsg.includes('no hay')) {
+            setNoVendedor(true);
+            setError(null);
+          } else {
+            setError("Error al cargar datos del vendedor.");
+          }
         }
       } catch (e) {
-        console.error("Error al cargar datos del vendedor:", e);
-        setError("Error al cargar datos del vendedor.");
+        // Si el error es de tipo not found, también mostrar el mensaje amigable
+        const msg = e?.message?.toLowerCase?.() || '';
+        // Si el error es de tipo not found, o si el formulario está vacío (primera vez)
+        const isFormEmpty = Object.values(initialFormState).every((v, i) => !form[Object.keys(initialFormState)[i]]);
+        if (msg.includes('not found') || msg.includes('no existe') || msg.includes('no hay') || isFormEmpty) {
+          setNoVendedor(true);
+          setError(null);
+        } else {
+          console.error("Error al cargar datos del vendedor:", e);
+          setError("Error al cargar datos del vendedor.");
+        }
       } finally {
         setLoading(false);
       }
@@ -150,6 +174,7 @@ export default function EdicionVendedor({ onClose }) {
 
       if (resp.ok) {
         setSuccess(true);
+        setNoVendedor(false); // Oculta el mensaje de noVendedor al guardar
         setTimeout(() => {
           setSuccess(false);
           if (onClose) onClose();
@@ -222,6 +247,11 @@ export default function EdicionVendedor({ onClose }) {
         {success && (
           <div className="md:col-span-2 bg-green-50 border border-green-500 text-green-800 p-4 rounded-md" role="alert"> {/* Consistent styling */}
             <p>Datos guardados correctamente</p>
+          </div>
+        )}
+        {noVendedor && !error && (
+          <div className="md:col-span-2 bg-blue-50 border border-blue-400 text-blue-700 p-4 rounded-md text-center" role="status">
+            <p>Aun no has registrado tus datos</p>
           </div>
         )}
         {error && (

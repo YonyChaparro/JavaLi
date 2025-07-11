@@ -157,11 +157,11 @@ const HistorialVentas = ({ onClose }) => {
             <h2 className="text-xl font-semibold text-gray-800">Historial de Ventas</h2>
             <div className="flex space-x-2">
               {onClose && (
-                <button onClick={onClose} className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition flex items-center">
+                <button onClick={onClose} className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition flex items-center shadow">
                   <FiChevronLeft className="mr-2" /> Volver
                 </button>
               )}
-              <button id="nueva-venta" onClick={handleNuevaVenta} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center">
+              <button id="nueva-venta" onClick={handleNuevaVenta} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center shadow">
                 <FiPlus className="mr-2" /> Registrar nueva venta
               </button>
             </div>
@@ -235,7 +235,7 @@ const HistorialVentas = ({ onClose }) => {
                   setFechaHasta('');
                   setPaginaActual(1);
                 }}
-                className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center"
+                className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center shadow"
               >
                 <FiRefreshCw className="mr-1" /> Limpiar filtros
               </button>

@@ -380,7 +380,7 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-4">
           <button
             type="button"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center mb-4 md:mb-0" // Styled button
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center mb-4 md:mb-0 shadow" // Unificado con ListaClientes
             onClick={agregarProducto}
           >
             <FiPlus className="mr-2" /> {/* Used FiPlus icon */}
@@ -416,7 +416,7 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
           <button
             type="button"
             onClick={onBack || onClose}
-            className="flex items-center px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded transition" // Styled button, consistent with HistorialVentas
+            className="flex items-center px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md transition shadow" // Unificado con ListaClientes
           >
             <FiChevronLeft className="mr-2" />
             Volver
@@ -425,8 +425,8 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
           <button
             type="submit"
             disabled={guardando}
-            className={`flex items-center px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded shadow transition ${guardando ? 'opacity-75 cursor-not-allowed' : ''
-              }`} // Styled button, added transition
+            className={`flex items-center px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md shadow transition ${guardando ? 'opacity-75 cursor-not-allowed' : ''
+              }`} // Unificado con ListaClientes
           >
             {guardando ? (
               <>
