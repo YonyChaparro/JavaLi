@@ -5,6 +5,7 @@ class Command {
             throw new Error("Command is an abstract class and cannot be instantiated directly");
         }
         this.db = db;
+        this.requiresTransaction = false; // Agrega esta línea
     }
 
     async execute() {
@@ -18,6 +19,7 @@ class CreateVendedorCommand extends Command {
     constructor(db, vendedorData) {
         super(db);
         this.vendedorData = vendedorData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -52,6 +54,7 @@ class CreateClienteCommand extends Command {
     constructor(db, clienteData) {
         super(db);
         this.clienteData = clienteData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -117,6 +120,7 @@ class UpdateClienteCommand extends Command {
         super(db);
         this.id = id;
         this.clienteData = clienteData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -204,6 +208,7 @@ class DeleteClienteCommand extends Command {
     constructor(db, id) {
         super(db);
         this.id = id;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -236,6 +241,7 @@ class CreateProductoCommand extends Command {
             throw new Error("Datos del producto no proporcionados");
         }
         this.productoData = productoData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -295,6 +301,7 @@ class UpdateProductoCommand extends Command {
         super(db);
         this.codigo = codigo;
         this.productoData = productoData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -345,6 +352,7 @@ class DeleteProductoCommand extends Command {
     constructor(db, codigo) {
         super(db);
         this.codigo = codigo;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -625,6 +633,7 @@ class CreateMovimientosInventarioCommand extends Command {
     constructor(db, movimientosData) {
         super(db);
         this.movimientosData = movimientosData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -703,6 +712,7 @@ class CreateTipoMovimientoCommand extends Command {
     constructor(db, tipoMovimientoData) {
         super(db);
         this.tipoMovimientoData = tipoMovimientoData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -730,6 +740,7 @@ class UpdateTipoMovimientoCommand extends Command {
         super(db);
         this.codigo = codigo;
         this.tipoMovimientoData = tipoMovimientoData;
+        this.requiresTransaction = true;
     }
 
     async execute() {
@@ -759,6 +770,7 @@ class DeleteTipoMovimientoCommand extends Command {
     constructor(db, codigo) {
         super(db);
         this.codigo = codigo;
+        this.requiresTransaction = true;
     }
 
     async execute() {

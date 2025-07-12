@@ -62,6 +62,59 @@ db.exec(sqlScript, (err) => {
 });
 
 // -----------------------------------------------------------------------------------
+// Command Invoker
+// Este invocador se encarga de ejecutar los comandos de forma segura, manejando transacciones si es necesario
+// -----------------------------------------------------------------------------------
+
+class CommandInvoker {
+    constructor(db) {
+        this.db = db;
+    }
+
+    async executeCommand(command) {
+        try {
+            // Solo inicia transacción si el comando lo requiere
+            if (command.requiresTransaction) {
+                await new Promise((resolve, reject) => {
+                    this.db.run('BEGIN TRANSACTION', [], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+            }
+
+            const result = await command.execute();
+
+            if (command.requiresTransaction) {
+                await new Promise((resolve, reject) => {
+                    this.db.run('COMMIT', [], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+            }
+
+            return result;
+        } catch (error) {
+            if (command.requiresTransaction) {
+                await new Promise((resolve, reject) => {
+                    this.db.run('ROLLBACK', [], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+            }
+            console.error(`Command failed: ${error.message}`);
+            throw error;
+        }
+    }
+}
+
+const invoker = new CommandInvoker(db);
+
+
+
+// -----------------------------------------------------------------------------------
 // Modulo Vendedor
 // Este comando se encarga de crear o actualizar un vendedor en la base de datos
 // -----------------------------------------------------------------------------------
@@ -70,7 +123,7 @@ db.exec(sqlScript, (err) => {
 app.post('/api/vendedor', express.json(), async (req, res) => {
     try {
         const command = new CreateVendedorCommand(db, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -88,7 +141,7 @@ app.post('/api/vendedor', express.json(), async (req, res) => {
 app.post('/api/clientes', express.json(), async (req, res) => {
     try {
         const command = new CreateClienteCommand(db, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.status(201).json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -110,7 +163,7 @@ app.put('/api/clientes/:id', express.json(), async (req, res) => {
 app.delete('/api/clientes/:id', async (req, res) => {
     try {
         const command = new DeleteClienteCommand(db, req.params.id);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -134,7 +187,7 @@ app.post('/api/productos', express.json(), async (req, res) => {
         }
         
         const command = new CreateProductoCommand(db, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.status(201).json(result);
     } catch (err) {
         console.error('Error al crear producto:', err); // Para depuración
@@ -146,7 +199,7 @@ app.post('/api/productos', express.json(), async (req, res) => {
 app.put('/api/productos/:codigo', express.json(), async (req, res) => {
     try {
         const command = new UpdateProductoCommand(db, req.params.codigo, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -157,7 +210,7 @@ app.put('/api/productos/:codigo', express.json(), async (req, res) => {
 app.delete('/api/productos/:codigo', async (req, res) => {
     try {
         const command = new DeleteProductoCommand(db, req.params.codigo);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -175,7 +228,7 @@ app.delete('/api/productos/:codigo', async (req, res) => {
 app.post('/api/venta', express.json(), async (req, res) => {
     try {
         const command = new CreateVentaCommand(db, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -186,7 +239,7 @@ app.post('/api/venta', express.json(), async (req, res) => {
 app.delete('/api/venta/:codigo', async (req, res) => {
     try {
         const command = new DeleteVentaCommand(db, req.params.codigo);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -204,7 +257,7 @@ app.delete('/api/venta/:codigo', async (req, res) => {
 app.post('/api/tipos-movimiento', express.json(), async (req, res) => {
     try {
         const command = new CreateTipoMovimientoCommand(db, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -223,7 +276,7 @@ app.post('/api/tipos-movimiento', express.json(), async (req, res) => {
 app.post('/api/movimientos-inventario', express.json(), async (req, res) => {
     try {
         const command = new CreateMovimientosInventarioCommand(db, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -234,7 +287,7 @@ app.post('/api/movimientos-inventario', express.json(), async (req, res) => {
 app.put('/api/tipos-movimiento/:codigo', express.json(), async (req, res) => {
     try {
         const command = new UpdateTipoMovimientoCommand(db, req.params.codigo, req.body);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -245,7 +298,7 @@ app.put('/api/tipos-movimiento/:codigo', express.json(), async (req, res) => {
 app.delete('/api/tipos-movimiento/:codigo', async (req, res) => {
     try {
         const command = new DeleteTipoMovimientoCommand(db, req.params.codigo);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -263,7 +316,7 @@ app.delete('/api/tipos-movimiento/:codigo', async (req, res) => {
 app.get('/api/existencias/:codigo_producto', async (req, res) => {
     try {
         const command = new GetExistenciasCommand(db, req.params.codigo_producto);
-        const existencias = await command.execute();
+        const existencias = await invoker.executeCommand(command);
         res.json(existencias);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -284,7 +337,7 @@ app.get('/api/movimientos-inventario', async (req, res) => {
         };
         
         const command = new GetMovimientosInventarioCommand(db, filters);
-        const result = await command.execute();
+        const result = await invoker.executeCommand(command);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -299,7 +352,7 @@ app.get('/api/movimientos-inventario/producto/:codigo_producto', async (req, res
             req.params.codigo_producto, 
             req.query.limit
         );
-        const movimientos = await command.execute();
+        const movimientos = await invoker.executeCommand(command);
         res.json(movimientos);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -313,7 +366,7 @@ app.get('/api/movimientos-inventario/resumen', async (req, res) => {
             fechaInicio: req.query.fechaInicio,
             fechaFin: req.query.fechaFin
         });
-        const resumen = await command.execute();
+        const resumen = await invoker.executeCommand(command);
         res.json(resumen);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -324,7 +377,7 @@ app.get('/api/movimientos-inventario/resumen', async (req, res) => {
 app.get('/api/vendedor', async (req, res) => {
     try {
         const command = new GetVendedorCommand(db);
-        const vendedor = await command.execute();
+        const vendedor = await invoker.executeCommand(command);
         if (!vendedor) return res.status(204).send();
         res.json(vendedor);
     } catch (err) {
@@ -340,7 +393,7 @@ app.get('/api/reportes', async (req, res) => {
             fechaInicio: req.query.fechaInicio,
             fechaFin: req.query.fechaFin
         });
-        const reporte = await command.execute();
+        const reporte = await invoker.executeCommand(command);
         res.json(reporte);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -351,7 +404,7 @@ app.get('/api/reportes', async (req, res) => {
 app.get('/api/productos-vendidos', async (req, res) => {
     try {
         const command = new GetProductosVendidosCommand(db);
-        const productos = await command.execute();
+        const productos = await invoker.executeCommand(command);
         res.json(productos);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -362,7 +415,7 @@ app.get('/api/productos-vendidos', async (req, res) => {
 app.get('/api/historial_ventas', async (req, res) => {
     try {
         const command = new GetHistorialVentasCommand(db);
-        const ventas = await command.execute();
+        const ventas = await invoker.executeCommand(command);
         res.json(ventas);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -376,7 +429,7 @@ app.get('/api/venta_detalle', async (req, res) => {
         if (!codigo) return res.status(400).json({ error: 'Código requerido' });
         
         const command = new GetVentaDetalleCommand(db, codigo);
-        const detalle = await command.execute();
+        const detalle = await invoker.executeCommand(command);
         res.json(detalle);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -387,7 +440,7 @@ app.get('/api/venta_detalle', async (req, res) => {
 app.get('/api/tipos-movimiento', async (req, res) => {
     try {
         const command = new GetTiposMovimientoCommand(db);
-        const tipos = await command.execute();
+        const tipos = await invoker.executeCommand(command);
         res.json(tipos);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -398,7 +451,7 @@ app.get('/api/tipos-movimiento', async (req, res) => {
 app.get('/api/tipos-movimiento/:codigo', async (req, res) => {
     try {
         const command = new GetTipoMovimientoCommand(db, req.params.codigo);
-        const tipo = await command.execute();
+        const tipo = await invoker.executeCommand(command);
         res.json(tipo);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -409,7 +462,7 @@ app.get('/api/tipos-movimiento/:codigo', async (req, res) => {
 app.get('/api/clientes', async (req, res) => {
     try {
         const command = new GetClientesCommand(db);
-        const clientes = await command.execute();
+        const clientes = await invoker.executeCommand(command);
         res.json(clientes);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -420,7 +473,7 @@ app.get('/api/clientes', async (req, res) => {
 app.get('/api/productos', async (req, res) => {
     try {
         const command = new GetProductosCommand(db);
-        const productos = await command.execute();
+        const productos = await invoker.executeCommand(command);
         res.json(productos);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -434,7 +487,7 @@ app.get('/api/venta', async (req, res) => {
         if (!codigo) return res.status(400).json({ error: 'Código requerido' });
         
         const command = new GetVentaCommand(db, codigo);
-        const venta = await command.execute();
+        const venta = await invoker.executeCommand(command);
         res.json(venta);
     } catch (err) {
         res.status(500).json({ error: err.message });
