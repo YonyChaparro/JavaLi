@@ -36,6 +36,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
   const [eliminando, setEliminando] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [mensaje, setMensaje] = useState(null);
+  const [enviandoFactura, setEnviandoFactura] = useState(false);
   async function eliminarVenta() {
     if (!venta || !venta.numero) return;
     setEliminando(true);
@@ -205,6 +206,70 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     setTimeout(() => iframe.remove(), 500);
 }
 
+  async function generarFacturaElectronica() {
+    console.log(data);
+    if (!venta?.codigo) return;
+
+    setMensaje(null);
+    setEnviandoFactura(true);
+
+    try {
+      const resp = await fetch(`http://localhost:3000/api/factura/${venta.codigo}`, {
+        method: 'POST'
+      });
+
+      // ⚠️ ESTA ES LA LÍNEA QUE TE FALTA
+      const data = await resp.json();
+
+      console.log('📦 Respuesta completa de la API:', data);
+
+      if (!resp.ok) {
+        throw new Error(data?.error || 'Error desconocido al generar factura');
+      }
+
+      setMensaje('Factura electrónica enviada correctamente.');
+
+      // Intentar descargar el PDF por URL
+      if (data?.respuesta?.pdf) {
+        const pdfResp = await fetch(data.respuesta.pdf);
+        const blob = await pdfResp.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `factura_electronica_${venta.codigo}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      // Intentar descargar si es base64
+      else if (data?.respuesta?.pdf_base64) {
+        const base64 = data.respuesta.pdf_base64;
+        const byteCharacters = atob(base64);
+        const byteArray = new Uint8Array([...byteCharacters].map(c => c.charCodeAt(0)));
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `factura_electronica_${venta.codigo}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } else {
+        console.warn('⚠️ No se recibió un PDF para descargar.');
+      }
+
+    } catch (err) {
+      console.error('❌ Error al generar factura electrónica:', err);
+      setMensaje('Error al generar factura electrónica: ' + err.message);
+    } finally {
+      setEnviandoFactura(false);
+    }
+
+    
+  }
+
+
+
+
 
   if (loading) return <div className="p-8">Cargando...</div>;
   if (error) return <div className="p-8 text-red-500">{error}</div>;
@@ -323,6 +388,14 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
           <FiDownload className="mr-2" />
           Generar factura ordinaria
         </button>
+        <button
+          onClick={generarFacturaElectronica}
+          disabled={enviandoFactura}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold flex items-center disabled:opacity-60"
+        >
+          {enviandoFactura ? 'Enviando...' : 'Generar factura electrónica'}
+        </button>
+
         <button
           type="button"
           disabled={eliminando}

@@ -10,6 +10,8 @@ require('dotenv').config();
 const app = express();
 const PORT = 3000;
 
+const facturaRoutes = require('./API/routes/factura.cjs');
+app.use('/api/factura', facturaRoutes);
 app.use(cors());
 app.use(express.json());
 
