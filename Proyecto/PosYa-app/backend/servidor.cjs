@@ -1357,6 +1357,7 @@ app.put('/api/productos/:codigo', (req, res) => {
         exentoIVA
       });
     }
+  );
 });
 
 
