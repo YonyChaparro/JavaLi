@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FiX, FiChevronLeft, FiTrash2, FiDownload } from 'react-icons/fi';
+import { FiX, FiChevronLeft, FiTrash2, FiDownload, FiSend, FiLink } from 'react-icons/fi'; // Añadimos FiSend y FiLink
 
 // Modal de confirmación reutilizable (idéntico a HistorialVentas)
 function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 'Confirmar', cancelText = 'Cancelar' }) {
@@ -36,6 +36,13 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
   const [eliminando, setEliminando] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [mensaje, setMensaje] = useState(null);
+
+  // --- Nuevos estados para la Factura Electrónica ---
+  const [facturaElectronicaInfo, setFacturaElectronicaInfo] = useState(null);
+  const [loadingFacturaElectronica, setLoadingFacturaElectronica] = useState(false);
+  const [errorFacturaElectronica, setErrorFacturaElectronica] = useState(null);
+  // --------------------------------------------------
+
   async function eliminarVenta() {
     if (!venta || !venta.numero) return;
     setEliminando(true);
@@ -82,27 +89,28 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     fetchVenta();
   }, [codigo]);
 
+  // Función para generar la factura ordinaria (PDF local)
   async function generarPDFVenta(venta, productos) {
     // Cargar jsPDF si no está presente
     if (!window.jspdf) {
-        await new Promise(resolve => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            script.onload = resolve;
-            document.body.appendChild(script);
-        });
+      await new Promise(resolve => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = resolve;
+        document.body.appendChild(script);
+      });
     }
     const { jsPDF } = window.jspdf;
 
     // Crear iframe oculto
     const iframe = document.createElement('iframe');
     Object.assign(iframe.style, {
-        position: 'fixed',
-        left: '-99999px',
-        top: '0',
-        width: '1200px',
-        height: '1600px',
-        zIndex: '-1',
+      position: 'fixed',
+      left: '-99999px',
+      top: '0',
+      width: '1200px',
+      height: '1600px',
+      zIndex: '-1',
     });
     document.body.appendChild(iframe);
 
@@ -128,14 +136,14 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
 
     const clienteDiv = docHTML.querySelector('.cliente');
     if (clienteDiv) {
-        const clienteDivs = clienteDiv.querySelectorAll('div');
-        const clienteNombre = venta.nombre_cliente && venta.apellido_cliente
-            ? `${venta.nombre_cliente} ${venta.apellido_cliente}`
-            : (venta.razon_social_cliente || venta.cliente || '');
-        if (clienteDivs[1]) clienteDivs[1].textContent = clienteNombre;
-        if (clienteDivs[2]) clienteDivs[2].textContent = `Dirección: ${venta.direccion_cliente || venta.direccion_cliente || ''}`;
-        if (clienteDivs[3]) clienteDivs[3].textContent = `Correo: ${venta.correo_electronico_cliente || venta.correo_cliente || ''}`;
-        if (clienteDivs[4]) clienteDivs[4].textContent = `Teléfono: ${venta.telefono_cliente || ''}`;
+      const clienteDivs = clienteDiv.querySelectorAll('div');
+      const clienteNombre = venta.nombre_cliente && venta.apellido_cliente
+        ? `${venta.nombre_cliente} ${venta.apellido_cliente}`
+        : (venta.razon_social_cliente || venta.cliente || '');
+      if (clienteDivs[1]) clienteDivs[1].textContent = clienteNombre;
+      if (clienteDivs[2]) clienteDivs[2].textContent = `Dirección: ${venta.direccion_cliente || venta.direccion_cliente || ''}`;
+      if (clienteDivs[3]) clienteDivs[3].textContent = `Correo: ${venta.correo_electronico_cliente || venta.correo_cliente || ''}`;
+      if (clienteDivs[4]) clienteDivs[4].textContent = `Teléfono: ${venta.telefono_cliente || ''}`;
     }
 
     const datosFactura = docHTML.querySelectorAll('.datos-factura .dato');
@@ -145,39 +153,39 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
 
     const tbody = docHTML.querySelector('.productos-table tbody');
     if (tbody) {
-        tbody.innerHTML = '';
-        let subtotal = 0, totalIVA = 0, total = 0;
-        productos.forEach(p => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${p.nombre_producto}</td>
-                <td>${p.cantidad}</td>
-                <td>$${Number(p.precio_unitario).toFixed(2)}</td>
-                <td>$${Number(p.IVA_unitario).toFixed(2)}</td>
-                <td>$${Number(p.submonto).toFixed(2)}</td>
-                <td>$${Number(p.monto).toFixed(2)}</td>
-            `;
-            tbody.appendChild(tr);
-            subtotal += Number(p.submonto);
-            totalIVA += Number(p.IVA_unitario) * Number(p.cantidad);
-            total += Number(p.monto);
-        });
-        const totales = docHTML.querySelectorAll('.totales .linea');
-        if (totales[0]) totales[0].innerHTML = `Subtotal: <strong>$${subtotal.toFixed(2)}</strong>`;
-        if (totales[1]) totales[1].innerHTML = `IVA: <strong>$${totalIVA.toFixed(2)}</strong>`;
-        if (totales[2]) totales[2].innerHTML = `Otros: <strong>$0.00</strong>`;
-        const totalNode = docHTML.querySelector('.totales .total');
-        if (totalNode) totalNode.textContent = `TOTAL: $${total.toFixed(2)}`;
+      tbody.innerHTML = '';
+      let subtotal = 0, totalIVA = 0, total = 0;
+      productos.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+                    <td>${p.nombre_producto}</td>
+                    <td>${p.cantidad}</td>
+                    <td>$${Number(p.precio_unitario).toFixed(2)}</td>
+                    <td>$${Number(p.IVA_unitario).toFixed(2)}</td>
+                    <td>$${Number(p.submonto).toFixed(2)}</td>
+                    <td>$${Number(p.monto).toFixed(2)}</td>
+                `;
+        tbody.appendChild(tr);
+        subtotal += Number(p.submonto);
+        totalIVA += Number(p.IVA_unitario) * Number(p.cantidad);
+        total += Number(p.monto);
+      });
+      const totales = docHTML.querySelectorAll('.totales .linea');
+      if (totales[0]) totales[0].innerHTML = `Subtotal: <strong>$${subtotal.toFixed(2)}</strong>`;
+      if (totales[1]) totales[1].innerHTML = `IVA: <strong>$${totalIVA.toFixed(2)}</strong>`;
+      if (totales[2]) totales[2].innerHTML = `Otros: <strong>$0.00</strong>`;
+      const totalNode = docHTML.querySelector('.totales .total');
+      if (totalNode) totalNode.textContent = `TOTAL: $${total.toFixed(2)}`;
     }
 
     // Cargar html2canvas si es necesario
     if (!window.html2canvas) {
-        await new Promise(resolve => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-            script.onload = resolve;
-            document.body.appendChild(script);
-        });
+      await new Promise(resolve => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        script.onload = resolve;
+        document.body.appendChild(script);
+      });
     }
 
     await new Promise(res => setTimeout(res, 300));
@@ -188,11 +196,11 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     const height = rect.height;
     // Usar html2canvas para capturar solo la factura
     const canvas = await window.html2canvas(docHTML.querySelector('.factura-container'), {
-        backgroundColor: '#fff',
-        scale: 2,
-        useCORS: true,
-        width: width,
-        height: height
+      backgroundColor: '#fff',
+      scale: 2,
+      useCORS: true,
+      width: width,
+      height: height
     });
     const imgData = canvas.toDataURL('image/png');
     // Crear PDF con tamaño ajustado a la imagen
@@ -203,8 +211,51 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     const nombreArchivo = `venta_${venta.numero || venta.codigo || 'factura'}.pdf`;
     doc.save(nombreArchivo);
     setTimeout(() => iframe.remove(), 500);
-}
+  }
 
+  // --- Nueva función para generar la Factura Electrónica ---
+  async function generarFacturaElectronica() {
+    if (!venta || !venta.codigo) {
+      setErrorFacturaElectronica('No se pudo obtener el código de venta para la factura electrónica.');
+      return;
+    }
+
+    setLoadingFacturaElectronica(true);
+    setErrorFacturaElectronica(null);
+    setFacturaElectronicaInfo(null);
+
+    try {
+      const response = await fetch('http://localhost:3000/api/factus/generar-factura-db', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ codigoVenta: venta.codigo }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setFacturaElectronicaInfo({
+          status: data.status,
+          message: data.message,
+          number: data.data.bill.number,
+          cufe: data.data.bill.cufe,
+          public_url: data.data.bill.public_url,
+          internal_id: data.data.bill.id,
+        });
+      } else {
+        setErrorFacturaElectronica(data.error || data.message || 'Error desconocido al generar factura electrónica.');
+        console.error('Error Factus:', data.details || data);
+      }
+    } catch (err) {
+      setErrorFacturaElectronica('Error de red al conectar con el servidor: ' + err.message);
+      console.error('Error de red:', err);
+    } finally {
+      setLoadingFacturaElectronica(false);
+    }
+  }
+  // --------------------------------------------------------
 
   if (loading) return <div className="p-8">Cargando...</div>;
   if (error) return <div className="p-8 text-red-500">{error}</div>;
@@ -212,8 +263,8 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
   return (
     <div className="bg-white rounded-lg shadow-lg p-8 max-w-6xl mx-auto relative" style={{ maxWidth: '1100px', maxHeight: '90vh', overflowY: 'auto' }}>
       {/* Botón cerrar */}
-      <button 
-        onClick={onClose} 
+      <button
+        onClick={onClose}
         className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
         aria-label="Cerrar"
       >
@@ -306,7 +357,49 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
         </div>
       )}
 
-      {/* Botón de acción */}
+      {/* Sección para el resultado de la factura electrónica */}
+      {loadingFacturaElectronica && (
+        <div className="mt-4 p-3 bg-blue-100 text-blue-800 rounded-md text-center">
+          Generando factura electrónica... Esto puede tardar unos segundos.
+        </div>
+      )}
+      {errorFacturaElectronica && (
+        <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-md">
+          <p className="font-semibold">Error al generar factura electrónica:</p>
+          <p>{errorFacturaElectronica}</p>
+        </div>
+      )}
+      {facturaElectronicaInfo && (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="font-bold text-green-700 mb-2">✅ Factura Electrónica Generada con Éxito!</p>
+          <p><strong>Número de Factura:</strong> {facturaElectronicaInfo.number}</p>
+          <p><strong>CUFE:</strong> <span className="break-all text-sm">{facturaElectronicaInfo.cufe}</span></p>
+          <p><strong>URL Pública:</strong> <a href={facturaElectronicaInfo.public_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+            <FiLink className="mr-1" /> Ver en Factus
+          </a></p>
+          <div className="flex space-x-2 mt-3">
+            <a
+              href={`http://localhost:3000/api/factus/factura/${facturaElectronicaInfo.number}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm font-semibold flex items-center"
+            >
+              <FiDownload className="mr-1" /> PDF
+            </a>
+            <a
+              href={`http://localhost:3000/api/factus/factura/${facturaElectronicaInfo.number}/xml`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm font-semibold flex items-center"
+            >
+              <FiDownload className="mr-1" /> XML
+            </a>
+          </div>
+        </div>
+      )}
+
+
+      {/* Botones de acción */}
       <div className="flex justify-end space-x-4 mt-6">
         <button
           type="button"
@@ -322,6 +415,14 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
         >
           <FiDownload className="mr-2" />
           Generar factura ordinaria
+        </button>
+        {/* Botón para generar Factura Electrónica */}
+        <button
+          onClick={generarFacturaElectronica}
+          disabled={loadingFacturaElectronica}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-semibold flex items-center disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loadingFacturaElectronica ? 'Generando...' : <><FiSend className="mr-2" /> Generar Electrónica</>}
         </button>
         <button
           type="button"

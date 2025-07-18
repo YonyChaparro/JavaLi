@@ -6,9 +6,14 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+// Importar los módulos de servicio de Factus
+const { enviarFacturaAFactus, descargarFacturaPdf, descargarFacturaXml } = require('./services/factus-factura.cjs');
+const { obtenerRangosDeNumeracion } = require('./services/factus-rangos.cjs'); // Puede que no necesites este directamente aquí, pero es útil tenerlo
 
 const app = express();
 const PORT = 3000;
+
+
 
 app.use(cors());
 app.use(express.json());
@@ -33,6 +38,245 @@ db.exec(sqlScript, (err) => {
     console.log('Tablas creadas correctamente desde base_de_datos.sql');
   }
 });
+
+// --- ENDPOINTS DE LA API DE VENTA LOCAL (ejemplos, si los usas para obtener datos) ---
+// Estos endpoints son los que tu frontend usa para obtener los detalles de la venta y productos
+// Asegúrate de que estos ya existen o impleméntalos según tu base de datos
+app.get('/api/venta', (req, res) => {
+  const { codigo } = req.query;
+  db.get(`SELECT * FROM VENTA WHERE codigo = ?`, [codigo], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    res.json(row);
+  });
+});
+
+app.get('/api/venta_detalle', (req, res) => {
+  const { codigo } = req.query;
+  db.all(`SELECT * FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?`, [codigo], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+app.delete('/api/venta/:numero', (req, res) => {
+    const { numero } = req.params;
+    db.run(`DELETE FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?`, [numero], function(err) {
+        if (err) {
+            console.error('Error al eliminar detalles de venta:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        db.run(`DELETE FROM VENTA WHERE numero = ?`, [numero], function(err) {
+            if (err) {
+                console.error('Error al eliminar venta:', err.message);
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ message: 'Venta no encontrada.' });
+            }
+            res.status(200).json({ message: 'Venta eliminada exitosamente.' });
+        });
+    });
+});
+
+
+// --- NUEVOS ENDPOINTS PARA LA API DE FACTUS ---
+
+// Endpoint para obtener rangos de numeración (opcional, si lo necesitas para otras funcionalidades)
+app.get('/api/factus/rangos/facturas', async (req, res) => {
+  try {
+    const rangos = await obtenerRangosDeNumeracion({
+      document: '01', // Solo facturas electrónicas
+      is_active: true // Solo activos
+    });
+    res.json(rangos);
+  } catch (error) {
+    console.error('Error al obtener rangos:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint principal para GENERAR UNA FACTURA ELECTRÓNICA desde los datos de tu DB
+app.post('/api/factus/generar-factura-db', async (req, res) => {
+  const { codigoVenta } = req.body; // Esperamos el código de venta desde el frontend
+
+  if (!codigoVenta) {
+    return res.status(400).json({ error: 'Se requiere el código de venta.' });
+  }
+
+  try {
+    // 1. Obtener datos de la venta y cliente desde SQLite
+    const venta = await new Promise((resolve, reject) => {
+      db.get(`SELECT * FROM VENTA WHERE codigo = ?`, [codigoVenta], (err, row) => {
+        if (err) reject(err);
+        resolve(row);
+      });
+    });
+
+    if (!venta) {
+      return res.status(404).json({ error: 'Venta no encontrada en la base de datos.' });
+    }
+
+    // Obtener datos del cliente (natural o jurídico).
+    // Esta lógica podría requerir ajustes según cómo tengas las tablas CLIENTE, CLIENTE_NATURAL, CLIENTE_JURIDICO
+    let clienteDetalles;
+    // Intenta buscar en CLIENTE_NATURAL
+    clienteDetalles = await new Promise((resolve, reject) => {
+        db.get(`SELECT * FROM CLIENTE_NATURAL WHERE identificacion = ?`, [venta.identificacion_cliente], (err, row) => {
+            if (err) reject(err);
+            resolve(row);
+        });
+    });
+
+    // Si no se encuentra en CLIENTE_NATURAL, intenta buscar en CLIENTE_JURIDICO
+    if (!clienteDetalles) {
+        clienteDetalles = await new Promise((resolve, reject) => {
+            db.get(`SELECT * FROM CLIENTE_JURIDICO WHERE identificacion = ?`, [venta.identificacion_cliente], (err, row) => {
+                if (err) reject(err);
+                resolve(row);
+            });
+        });
+    }
+
+    // Si aún no se encuentra, busca en la tabla CLIENTE principal (podría ser para datos básicos si no es natural/jurídico)
+    if (!clienteDetalles) {
+        clienteDetalles = await new Promise((resolve, reject) => {
+            db.get(`SELECT * FROM CLIENTE WHERE identificacion = ?`, [venta.identificacion_cliente], (err, row) => {
+                if (err) reject(err);
+                resolve(row);
+            });
+        });
+    }
+
+
+    // 2. Obtener detalles de los productos vendidos
+    const detallesProductos = await new Promise((resolve, reject) => {
+      db.all(`SELECT * FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?`, [codigoVenta], (err, rows) => {
+        if (err) reject(err);
+        resolve(rows);
+      });
+    });
+
+    // 3. Mapear datos de la DB al formato de Factus
+    // ESTA ES LA PARTE MÁS CRÍTICA Y DONDE NECESITARÁS TUS MAPEOS DE IDs DE FACTUS
+    // Los valores como 3, 31, 980, 70, 1, 21, 1 son EJEMPLOS.
+    // Debes reemplazarlos con los IDs numéricos de Factus que correspondan a tus datos.
+    // Puedes obtener estos IDs de los catálogos de Factus API o de tu propio mapeo.
+    const facturaParaFactus = {
+      "document": "01", // Tipo de documento (Factura de Venta)
+      "reference_code": venta.codigo,
+      "observation": "", // Puedes añadir observaciones desde tu DB si tienes
+      "payment_method_code": "10", // Código de método de pago (ej. 10: Efectivo). Mapear desde tu DB.
+      "customer": {
+        "identification": venta.identificacion_cliente,
+        "dv": clienteDetalles?.dv || null, // Asegúrate de tener este campo en tu tabla de cliente
+        "company": clienteDetalles?.razon_social || "", // Para clientes jurídicos
+        "trade_name": clienteDetalles?.razon_social || "", // Para clientes jurídicos
+        "names": clienteDetalles?.nombre ? `${clienteDetalles.nombre} ${clienteDetalles.apellido || ''}`.trim() : "", // Para clientes naturales
+        "address": venta.direccion_cliente || clienteDetalles?.direccion || '',
+        "email": venta.correo_electronico_cliente || clienteDetalles?.correo_electronico || '',
+        "phone": venta.numero_telefonico_cliente || clienteDetalles?.numero_telefonico || '',
+        // *** MAPEO CRÍTICO DE IDs DE FACTUS ***
+        "legal_organization_id": clienteDetalles?.razon_social ? 1 : 2, // 1: Jurídica, 2: Natural (Asumiendo que razon_social indica jurídico)
+        "tribute_id": 21, // ID del tipo de tributo (ej. 21: No aplica, 1: IVA). Mapear desde tu DB.
+        "identification_document_id": venta.tipo_identificacion_cliente === 'NIT' ? 31 : 3, // ID del tipo de documento (ej. 3: CC, 31: NIT). Mapear desde tu DB.
+        "municipality_id": 980 // ID del municipio (ej. 980: San Gil). Mapear desde tu DB.
+      },
+      "items": await Promise.all(detallesProductos.map(async item => {
+        // Obtener la tasa de IVA del producto desde la tabla PRODUCTO
+        const producto = await new Promise((resolve, reject) => {
+            db.get(`SELECT * FROM PRODUCTO WHERE codigo = ?`, [item.codigo_producto], (err, row) => {
+                if (err) reject(err);
+                resolve(row);
+            });
+        });
+
+        return {
+          "code_reference": item.codigo_producto,
+          "name": item.nombre_producto,
+          "quantity": item.cantidad,
+          "discount_rate": 0, // Si tu DB tiene descuentos por ítem, úsalos
+          "price": item.precio_unitario,
+          "tax_rate": producto?.tasa_IVA || 0, // Usar la tasa_IVA del PRODUCTO
+          "unit_measure_id": 70, // ID de unidad de medida (ej. 70 para 'unidad'). Mapear desde tu DB.
+          "standard_code_id": 1, // ID de código estándar (ej. 1). Mapear desde tu DB.
+          "is_excluded": 0, // 0: No excluido, 1: Excluido. Mapear si tienes esta info.
+          "tribute_id": 1, // ID de tributo (ej. 1 para IVA). Mapear desde tu DB.
+          "withholding_taxes": [] // Si tienes retenciones por producto, mapearlas aquí con sus IDs y tasas
+        };
+      }))
+    };
+
+    // 4. Enviar la factura a Factus
+    const resultadoFactus = await enviarFacturaAFactus(facturaParaFactus);
+    res.json(resultadoFactus);
+
+  } catch (error) {
+    console.error('❌ Error al generar factura desde DB:', error.message);
+    // Si el error viene de Factus, podría tener un 'data' con más detalles
+    if (error.response?.data) {
+        console.error('Detalles del error de Factus:', error.response.data);
+        return res.status(error.response.status || 500).json({ 
+            error: error.response.data.message || 'Error de validación de Factus', 
+            details: error.response.data.errors 
+        });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para Descargar factura PDF por número (usado por el frontend)
+app.get('/api/factus/factura/:numeroFactura/pdf', async (req, res) => {
+  try {
+    const { numeroFactura } = req.params;
+    const { fileName, pdfBase64 } = await descargarFacturaPdf(numeroFactura);
+
+    const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+    let finalFileName = fileName;
+    if (!finalFileName.toLowerCase().endsWith('.pdf')) {
+      finalFileName += '.pdf';
+    }
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${finalFileName}"`
+    });
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error en el endpoint de descarga PDF:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para Descargar factura XML por número (usado por el frontend)
+app.get('/api/factus/factura/:numeroFactura/xml', async (req, res) => {
+  try {
+    const { numeroFactura } = req.params;
+    const { fileName, xmlBase64 } = await descargarFacturaXml(numeroFactura);
+
+    const xmlBuffer = Buffer.from(xmlBase64, 'base64');
+    let finalFileName = fileName;
+    if (!finalFileName.toLowerCase().endsWith('.xml')) { // Asegurar extensión .xml
+      finalFileName += '.xml';
+    }
+
+    res.set({
+      'Content-Type': 'application/xml',
+      'Content-Disposition': `attachment; filename="${finalFileName}"`
+    });
+    res.send(xmlBuffer);
+  } catch (error) {
+    console.error('Error en el endpoint de descarga XML:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Endpoint para consultar existencias actuales de un producto
 app.get('/api/existencias/:codigo_producto', (req, res) => {
