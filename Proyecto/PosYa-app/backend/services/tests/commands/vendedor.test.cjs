@@ -4,6 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
 
+// Accede a las clases implementadas desde "commands.cjs"
 const {
   CreateVendedorCommand,
   GetVendedorCommand
@@ -11,7 +12,7 @@ const {
 
 let db;
 
-// Configuración de Jest para usar una base de datos SQLite en memoria
+// 1. Crear base de datos en memoria antes de cada test
 beforeEach((done) => {
   // Crear la base de datos en memoria
   db = new sqlite3.Database(':memory:');
@@ -22,12 +23,13 @@ beforeEach((done) => {
   db.exec(schema, done); // Jest espera que se llame a done() para continuar
 });
 
+// 2. Cerrar base de datos después de cada test
 afterEach(() => {
-  // Cerrar la base de datos al finalizar cada test
   db.close();
 });
 
 test('Debe crear un vendedor y devolverlo correctamente', async () => {
+  // 1. Insertar vendedor
   const vendedorData = {
     NIT: '900123456-7',
     nombre_o_razon_social: 'Mi Empresa S.A.S.',
@@ -37,22 +39,22 @@ test('Debe crear un vendedor y devolverlo correctamente', async () => {
     responsabilidad_fiscal: 'Responsable de IVA'
   };
 
-  // Ejecutar comando para insertar vendedor
   const createCmd = new CreateVendedorCommand(db, vendedorData);
   const result = await createCmd.execute();
 
-  // Verificar que la inserción fue exitosa
+  // 2. Verificar que el vendedor se insertó
   expect(result).toEqual({ ok: true });
 
-  // Ejecutar comando para recuperar al vendedor
+  // 3. Consultar vendedor
   const getCmd = new GetVendedorCommand(db);
   const vendedor = await getCmd.execute();
 
-  // Verificar que los datos coinciden
+  // 4. Verificar datos del vendedor
   expect(vendedor).toMatchObject(vendedorData);
 });
 
 test('Debe fallar si se intenta crear el vendedor dos veces', async () => {
+  // 1. Definir vendedor único
   const vendedorData = {
     NIT: '999999999-9',
     nombre_o_razon_social: 'Empresa Única',
@@ -62,15 +64,15 @@ test('Debe fallar si se intenta crear el vendedor dos veces', async () => {
     responsabilidad_fiscal: 'IVA'
   };
 
-  // Primer intento: debe funcionar
+  // 2. Primer intento: debe funcionar
   const createCmd1 = new CreateVendedorCommand(db, vendedorData);
   await expect(createCmd1.execute()).resolves.toEqual({ ok: true });
 
-  // Segundo intento: se sobreescribe, pero no debería fallar
+  // 3. Segundo intento: debe sobrescribir, no fallar
   const createCmd2 = new CreateVendedorCommand(db, vendedorData);
   await expect(createCmd2.execute()).resolves.toEqual({ ok: true });
 
-  // Confirmamos que solo hay un registro en la tabla
+  // 4. Verificar que solo hay un registro
   const rowCount = await new Promise((resolve, reject) => {
     db.get('SELECT COUNT(*) as total FROM VENDEDOR', [], (err, row) => {
       if (err) reject(err);

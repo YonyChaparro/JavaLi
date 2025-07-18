@@ -4,6 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
 
+// Accede a las clases implementadas desde "commands.cjs"
 const {
   CreateClienteCommand,
   CreateProductoCommand,
@@ -14,17 +15,22 @@ const {
 
 let db;
 
+// 1. Crear base de datos en memoria antes de cada test
 beforeEach((done) => {
+  // Crear la base de datos en memoria
   db = new sqlite3.Database(':memory:');
 
+  // Cargar y ejecutar el esquema de base_de_datos.sql
   const schemaPath = path.resolve(__dirname, '../../../base_de_datos.sql');
   const schema = fs.readFileSync(schemaPath, 'utf8');
-  db.exec(schema, done);
+  db.exec(schema, done); // Jest espera que se llame a done() para continuar
 });
 
+// 2. Cerrar base de datos después de cada test
 afterEach(() => {
   db.close();
 });
+
 
 test('Debe crear una venta completa con cliente, vendedor y productos', async () => {
   // 1. Insertar cliente tipo natural
@@ -100,6 +106,7 @@ test('Debe crear una venta completa con cliente, vendedor y productos', async ()
 });
 
 test('Debe fallar si el cliente no existe', async () => {
+  // 1. Definir datos de venta con cliente inexistente
   const ventaData = {
     fecha: '2025-07-18',
     hora: '11:00:00',
@@ -120,6 +127,9 @@ test('Debe fallar si el cliente no existe', async () => {
     ]
   };
 
+  // 2. Ejecutar comando con cliente no registrado
   const cmd = new CreateVentaCommand(db, ventaData);
+
+  // 3. Verificar que lance error por cliente inexistente
   await expect(cmd.execute()).rejects.toThrow('Cliente no encontrado');
 });
