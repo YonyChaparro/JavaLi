@@ -163,30 +163,48 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
       });
     });
 
-    // 3. Mapear datos de la DB al formato de Factus
+        // 3. Mapear datos de la DB al formato de Factus
     // ESTA ES LA PARTE MÁS CRÍTICA Y DONDE NECESITARÁS TUS MAPEOS DE IDs DE FACTUS
     // Los valores como 3, 31, 980, 70, 1, 21, 1 son EJEMPLOS.
     // Debes reemplazarlos con los IDs numéricos de Factus que correspondan a tus datos.
     // Puedes obtener estos IDs de los catálogos de Factus API o de tu propio mapeo.
     const facturaParaFactus = {
-      "document": "01", // Tipo de documento (Factura de Venta)
-      "reference_code": venta.codigo,
-      "observation": "", // Puedes añadir observaciones desde tu DB si tienes
-      "payment_method_code": "10", // Código de método de pago (ej. 10: Efectivo). Mapear desde tu DB.
+      "document": "01",
+      "reference_code": venta.codigo, // Código de referencia de su venta local
+      "observation": "", // Campo de observación, puede ser mapeado desde la DB si existe
+      "payment_method_code": "10", // Código de método de pago (ej. 10: Efectivo) - Mapear desde su DB si aplica
       "customer": {
-        "identification": venta.identificacion_cliente,
-        "dv": clienteDetalles?.dv || null, // Asegúrate de tener este campo en tu tabla de cliente
-        "company": clienteDetalles?.razon_social || "", // Para clientes jurídicos
-        "trade_name": clienteDetalles?.razon_social || "", // Para clientes jurídicos
-        "names": clienteDetalles?.nombre ? `${clienteDetalles.nombre} ${clienteDetalles.apellido || ''}`.trim() : "", // Para clientes naturales
+        "identification": venta.identificacion_cliente, // Identificación del cliente (NIT/CC)
+        // El 'dv' (dígito de verificación) a menudo se asocia con NIT.
+        // Asegúrese de que su tabla de cliente tenga un campo 'dv' si es necesario.
+        "dv": clienteDetalles?.dv || null,
+        "company": clienteDetalles?.razon_social || "", // Razón social para clientes jurídicos
+        "trade_name": clienteDetalles?.razon_social || "", // Nombre comercial para clientes jurídicos
+        // Concatena nombre y apellido para clientes naturales
+        "names": clienteDetalles?.nombre ? `${clienteDetalles.nombre} ${clienteDetalles.apellido || ''}`.trim() : "",
+        // Dirección del cliente, priorizando la de la venta, luego la del detalle del cliente
         "address": venta.direccion_cliente || clienteDetalles?.direccion || '',
+        // Correo electrónico del cliente, priorizando la de la venta, luego la del detalle del cliente
         "email": venta.correo_electronico_cliente || clienteDetalles?.correo_electronico || '',
+        // Número de teléfono del cliente, priorizando la de la venta, luego la del detalle del cliente
         "phone": venta.numero_telefonico_cliente || clienteDetalles?.numero_telefonico || '',
         // *** MAPEO CRÍTICO DE IDs DE FACTUS ***
-        "legal_organization_id": clienteDetalles?.razon_social ? 1 : 2, // 1: Jurídica, 2: Natural (Asumiendo que razon_social indica jurídico)
-        "tribute_id": 21, // ID del tipo de tributo (ej. 21: No aplica, 1: IVA). Mapear desde tu DB.
-        "identification_document_id": venta.tipo_identificacion_cliente === 'NIT' ? 31 : 3, // ID del tipo de documento (ej. 3: CC, 31: NIT). Mapear desde tu DB.
-        "municipality_id": 980 // ID del municipio (ej. 980: San Gil). Mapear desde tu DB.
+        // ID de la organización legal (1: Jurídica, 2: Natural)
+        // Asume que si 'razon_social' existe, es jurídica.
+        "legal_organization_id": clienteDetalles?.razon_social ? 1 : 2,
+        // ID del tipo de tributo (ej. 21: No aplica, 1: IVA) - Mapear desde su DB
+        "tribute_id": 21, // <<-- REEMPLAZAR con el ID real de Factus
+        // ID del tipo de documento de identificación (ej. 3: CC, 31: NIT) - Mapear desde su DB
+        "identification_document_id": (() => {
+            switch (venta.tipo_identificacion_cliente) {
+                case 'CC': return 3; // Cédula de Ciudadanía
+                case 'NIT': return 31; // NIT
+                // Añadir más casos según los tipos de documento en su DB y sus IDs en Factus
+                default: return 3; // Valor por defecto, ajustar según su necesidad
+            }
+        })(),
+        // ID del municipio (ej. 980: San Gil) - Mapear desde su DB
+        "municipality_id": 980 // <<-- REEMPLAZAR con el ID real de Factus
       },
       "items": await Promise.all(detallesProductos.map(async item => {
         // Obtener la tasa de IVA del producto desde la tabla PRODUCTO
@@ -198,17 +216,21 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
         });
 
         return {
-          "code_reference": item.codigo_producto,
-          "name": item.nombre_producto,
-          "quantity": item.cantidad,
-          "discount_rate": 0, // Si tu DB tiene descuentos por ítem, úsalos
-          "price": item.precio_unitario,
-          "tax_rate": producto?.tasa_IVA || 0, // Usar la tasa_IVA del PRODUCTO
-          "unit_measure_id": 70, // ID de unidad de medida (ej. 70 para 'unidad'). Mapear desde tu DB.
-          "standard_code_id": 1, // ID de código estándar (ej. 1). Mapear desde tu DB.
-          "is_excluded": 0, // 0: No excluido, 1: Excluido. Mapear si tienes esta info.
-          "tribute_id": 1, // ID de tributo (ej. 1 para IVA). Mapear desde tu DB.
-          "withholding_taxes": [] // Si tienes retenciones por producto, mapearlas aquí con sus IDs y tasas
+          "code_reference": item.codigo_producto, // Código de referencia del producto - Asegúrese de que cumpla las reglas de Factus
+          "name": item.nombre_producto, // Nombre del producto
+          "quantity": item.cantidad, // Cantidad vendida
+          "discount_rate": 0, // Tasa de descuento del ítem - Mapear desde su DB si aplica
+          "price": item.precio_unitario, // Precio unitario del producto
+          "tax_rate": producto?.tasa_IVA || 0, // Tasa de IVA del producto - Obtenida de la tabla PRODUCTO
+          // ID de unidad de medida (ej. 70 para 'unidad') - Mapear desde su DB
+          "unit_measure_id": 70, // <<-- REEMPLAZAR con el ID real de Factus
+          // ID de código estándar (ej. 1) - Mapear desde su DB
+          "standard_code_id": 1, // <<-- REEMPLAZAR con el ID real de Factus
+          // Indicador de exclusión de impuestos (0: No excluido, 1: Excluido) - Mapear desde su DB
+          "is_excluded": 0, // 0 es el valor que funcionó en la depuración anterior
+          // ID de tributo (ej. 1 para IVA) - Mapear desde su DB
+          "tribute_id": 1, // <<-- REEMPLAZAR con el ID real de Factus
+          "withholding_taxes": [] // Array de retenciones - Mapear desde su DB si existen retenciones por producto
         };
       }))
     };
