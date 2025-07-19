@@ -214,7 +214,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
 
   // --- Nueva función para generar la Factura Electrónica ---
   async function generarFacturaElectronica() {
-    if (!venta || !venta.codigo) {
+    if (!venta || !venta.numero) {
       setErrorFacturaElectronica('No se pudo obtener el código de venta para la factura electrónica.');
       return;
     }
@@ -229,7 +229,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ codigoVenta: venta.codigo }),
+        body: JSON.stringify({ codigoVenta: venta.numero }),
       });
 
       const data = await response.json();

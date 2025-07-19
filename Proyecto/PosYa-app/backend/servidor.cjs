@@ -34,6 +34,10 @@ const {
     GetProductosVendidosCommand
 } = require('./commands.cjs'); 
 
+const { obtenerTokenFactus } = require('./services/factus-auth.cjs');
+const { obtenerUltimoRangoActivoFactura, obtenerRangosDeNumeracion } = require('./services/factus-rangos.cjs');
+const { enviarFacturaAFactus, descargarFacturaPdf, descargarFacturaXml } = require('./services/factus-factura.cjs');
+
 const app = express();
 const PORT = 3000;
 
