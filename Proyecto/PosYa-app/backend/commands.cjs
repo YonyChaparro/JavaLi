@@ -627,6 +627,166 @@ class DeleteVentaCommand extends Command {
     }
 }
 
+// Modulo FACTUS - Facturación Electrónica
+class GetFactusRangosCommand extends Command {
+  constructor(db, filters = {}) {
+    super(db);
+    this.filters = {
+      document: '01', // Facturas electrónicas
+      is_active: true,
+      ...filters
+    };
+  }
+
+  async execute() {
+    const { obtenerRangosDeNumeracion } = require('./services/factus-rangos.cjs');
+    return await obtenerRangosDeNumeracion(this.filters);
+  }
+}
+
+class GenerateFactusFacturaCommand extends Command {
+  constructor(db, codigoVenta) {
+    super(db);
+    this.codigoVenta = codigoVenta;
+    this.requiresTransaction = true;
+  }
+
+  async execute() {
+    const { enviarFacturaAFactus } = require('./services/factus-factura.cjs');
+    
+    // 1. Obtener datos de la venta
+    const venta = await new Promise((resolve, reject) => {
+      this.db.get(`SELECT * FROM VENTA WHERE codigo = ?`, [this.codigoVenta], (err, row) => {
+        if (err) reject(err);
+        resolve(row);
+      });
+    });
+
+    if (!venta) {
+      throw new Error('Venta no encontrada en la base de datos.');
+    }
+
+    // 2. Obtener detalles del cliente
+    let clienteDetalles = await new Promise((resolve, reject) => {
+      this.db.get(`SELECT * FROM CLIENTE_NATURAL WHERE identificacion = ?`, 
+        [venta.identificacion_cliente], (err, row) => {
+          if (err) reject(err);
+          resolve(row);
+      });
+    });
+
+    if (!clienteDetalles) {
+      clienteDetalles = await new Promise((resolve, reject) => {
+        this.db.get(`SELECT * FROM CLIENTE_JURIDICO WHERE identificacion = ?`, 
+          [venta.identificacion_cliente], (err, row) => {
+            if (err) reject(err);
+            resolve(row);
+        });
+      });
+    }
+
+    if (!clienteDetalles) {
+      clienteDetalles = await new Promise((resolve, reject) => {
+        this.db.get(`SELECT * FROM CLIENTE WHERE identificacion = ?`, 
+          [venta.identificacion_cliente], (err, row) => {
+            if (err) reject(err);
+            resolve(row);
+        });
+      });
+    }
+
+    // 3. Obtener detalles de productos
+    const detallesProductos = await new Promise((resolve, reject) => {
+      this.db.all(`SELECT * FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?`, 
+        [this.codigoVenta], (err, rows) => {
+          if (err) reject(err);
+          resolve(rows);
+      });
+    });
+
+    // 4. Mapear a formato Factus
+    const facturaParaFactus = {
+      document: "01",
+      reference_code: this.codigoVenta,
+      observation: "",
+      payment_method_code: "10",
+      customer: {
+        identification: venta.identificacion_cliente,
+        dv: 3,
+        company: venta.razon_social_cliente || "",
+        trade_name: venta.razon_social_cliente || "",
+        names: venta.nombre_cliente ? `${venta.nombre_cliente} ${venta.apellido_cliente || ''}`.trim() : "",
+        address: venta.direccion_cliente || '',
+        email: venta.correo_electronico_cliente || '',
+        phone: venta.numero_telefonico_cliente || '',
+        legal_organization_id: venta.razon_social_cliente ? 1 : 2,
+        tribute_id: 21,
+        identification_document_id: (() => {
+          switch (venta.tipo_identificacion_cliente) {
+            case 'CC': return 3;
+            case 'NIT': return 31;
+            case 'CE': return 4;
+            case 'PA': return 5;
+            default: return 3;
+          }
+        })(),
+        municipality_id: 980
+      },
+      items: await Promise.all(detallesProductos.map(async item => {
+        const producto = await new Promise((resolve, reject) => {
+          this.db.get(`SELECT * FROM PRODUCTO WHERE codigo = ?`, 
+            [item.codigo_producto], (err, row) => {
+              if (err) reject(err);
+              resolve(row);
+          });
+        });
+
+        return {
+          code_reference: this.codigoVenta,
+          name: item.nombre_producto,
+          quantity: item.cantidad,
+          discount_rate: 0,
+          price: item.precio_unitario,
+          tax_rate: producto?.tasa_IVA || 0,
+          unit_measure_id: 70,
+          standard_code_id: 1,
+          is_excluded: 0,
+          tribute_id: 1,
+          withholding_taxes: []
+        };
+      }))
+    };
+
+    // 5. Enviar a Factus
+    return await enviarFacturaAFactus(facturaParaFactus);
+  }
+}
+
+class DownloadFactusPdfCommand extends Command {
+  constructor(db, numeroFactura) {
+    super(db);
+    this.numeroFactura = numeroFactura;
+  }
+
+  async execute() {
+    const { descargarFacturaPdf } = require('./services/factus-factura.cjs');
+    return await descargarFacturaPdf(this.numeroFactura);
+  }
+}
+
+class DownloadFactusXmlCommand extends Command {
+  constructor(db, numeroFactura) {
+    super(db);
+    this.numeroFactura = numeroFactura;
+  }
+
+  async execute() {
+    const { descargarFacturaXml } = require('./services/factus-factura.cjs');
+    return await descargarFacturaXml(this.numeroFactura);
+  }
+}
+
+
 // Modulo Movimientos de Inventario
 // Este comando se encarga de crear movimientos de inventario en la base de datos
 class CreateMovimientosInventarioCommand extends Command {
@@ -1282,6 +1442,10 @@ module.exports = {
     DeleteProductoCommand,
     CreateVentaCommand,
     DeleteVentaCommand,
+    GetFactusRangosCommand,
+    GenerateFactusFacturaCommand,
+    DownloadFactusPdfCommand,
+    DownloadFactusXmlCommand,
     CreateMovimientosInventarioCommand,
     CreateTipoMovimientoCommand,
     UpdateTipoMovimientoCommand,

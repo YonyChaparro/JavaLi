@@ -247,6 +247,90 @@ app.delete('/api/venta/:codigo', async (req, res) => {
 });
 
 
+// -----------------------------------------------------------------------------------
+// Modulo FACTUS - Facturación Electrónica
+// Estos comandos se encargan de interactuar con la API de Factus para generar facturas electrónicas
+// -----------------------------------------------------------------------------------
+
+//// Endpoint para obtener rangos de numeración
+//app.get('/api/factus/rangos/facturas', async (req, res) => {
+//  try {
+//    const command = new GetFactusRangosCommand(db, {
+//      document: '01',
+//      is_active: true
+//    });
+//    const rangos = await invoker.executeCommand(command);
+//    res.json(rangos);
+//  } catch (error) {
+//    console.error('Error al obtener rangos:', error.message);
+//    res.status(500).json({ error: error.message });
+//  }
+//});
+//
+//// Endpoint para generar factura electrónica
+//app.post('/api/factus/generar-factura-db', async (req, res) => {
+//  const { codigoVenta } = req.body;
+//  
+//  if (!codigoVenta) {
+//    return res.status(400).json({ error: 'Se requiere el código de venta.' });
+//  }
+//
+//  try {
+//    const command = new GenerateFactusFacturaCommand(db, codigoVenta);
+//    const resultado = await invoker.executeCommand(command);
+//    res.json(resultado);
+//  } catch (error) {
+//    console.error('Error al generar factura:', error.message);
+//    if (error.response?.data) {
+//      res.status(error.response.status || 500).json({ 
+//        error: error.response.data.message || 'Error de Factus',
+//        details: error.response.data.errors 
+//      });
+//    } else {
+//      res.status(500).json({ error: error.message });
+//    }
+//  }
+//});
+//
+//// Endpoint para descargar PDF
+//app.get('/api/factus/factura/:numeroFactura/pdf', async (req, res) => {
+//  try {
+//    const command = new DownloadFactusPdfCommand(db, req.params.numeroFactura);
+//    const { fileName, pdfBase64 } = await invoker.executeCommand(command);
+//    
+//    const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+//    const finalFileName = fileName.toLowerCase().endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+//    
+//    res.set({
+//      'Content-Type': 'application/pdf',
+//      'Content-Disposition': `attachment; filename="${finalFileName}"`
+//    });
+//    res.send(pdfBuffer);
+//  } catch (error) {
+//    console.error('Error al descargar PDF:', error);
+//    res.status(500).json({ error: error.message });
+//  }
+//});
+//
+//// Endpoint para descargar XML
+//app.get('/api/factus/factura/:numeroFactura/xml', async (req, res) => {
+//  try {
+//    const command = new DownloadFactusXmlCommand(db, req.params.numeroFactura);
+//    const { fileName, xmlBase64 } = await invoker.executeCommand(command);
+//    
+//    const xmlBuffer = Buffer.from(xmlBase64, 'base64');
+//    const finalFileName = fileName.toLowerCase().endsWith('.xml') ? fileName : `${fileName}.xml`;
+//    
+//    res.set({
+//      'Content-Type': 'application/xml',
+//      'Content-Disposition': `attachment; filename="${finalFileName}"`
+//    });
+//    res.send(xmlBuffer);
+//  } catch (error) {
+//    console.error('Error al descargar XML:', error);
+//    res.status(500).json({ error: error.message });
+//  }
+//});
 
 // -----------------------------------------------------------------------------------
 // Modulo Movimientos de Inventario
