@@ -8,9 +8,12 @@ const path = require('path');
 const {
   CreateClienteCommand,
   CreateProductoCommand,
+  CreateTipoMovimientoCommand,
   CreateVendedorCommand,
   CreateVentaCommand,
-  GetVentaCommand
+  DeleteVentaCommand,
+  GetVentaCommand,
+  GetVentaDetalleCommand
 } = require('../../../commands.cjs');
 
 let db;
@@ -132,4 +135,78 @@ test('Debe fallar si el cliente no existe', async () => {
 
   // 3. Verificar que lance error por cliente inexistente
   await expect(cmd.execute()).rejects.toThrow('Cliente no encontrado');
+});
+
+test('Debe eliminar una venta correctamente', async () => {
+  // 1. Crear cliente
+  await new CreateClienteCommand(db, {
+    tipoCliente: 'natural',
+    tipoDocumento: 'CC',
+    numeroDocumento: '123',
+    primerNombre: 'Ana',
+    primerApellido: 'López',
+    correo_electronico: 'ana@example.com',
+    direccion: 'Calle Falsa 123',
+    ciudad: 'Bogotá'
+  }).execute();
+
+  // 2. Crear producto
+  await new CreateProductoCommand(db, {
+    codigo: 'P123',
+    nombre: 'Producto Demo',
+    costoUnitario: 100,
+    precioUnitario: 200
+  }).execute();
+
+  // 3. Crear tipo movimiento para ventas
+  await new CreateTipoMovimientoCommand(db, {
+    nombre: 'Salida por Venta',
+    tipo_flujo: 'Salida'
+  }).execute();
+
+  // 4. Crear vendedor
+  await new CreateVendedorCommand(db, {
+    NIT: '800100200-1',
+    nombre_o_razon_social: 'Empresa Prueba',
+    direccion: 'Zona Industrial',
+    numero_de_contacto: '6012345678',
+    municipio: 'Bogotá',
+    responsabilidad_fiscal: 'Simplificado'
+  }).execute();
+
+  // 5. Crear venta
+  const ventaData = {
+    fecha: '2025-07-19',
+    hora: '10:00:00',
+    identificacion_cliente: '123',
+    nombre_o_razon_social_vendedor: 'Empresa Prueba',
+    NIT_vendedor: '800100200-1',
+    direccion_vendedor: 'Zona Industrial',
+    numero_de_contacto_vendedor: '6012345678',
+    municipio_vendedor: 'Bogotá',
+    responsabilidad_fiscal_vendedor: 'Simplificado',
+    productos: [
+      {
+        nombre: 'Producto Demo',
+        precio_unitario: 200,
+        IVA_unitario: 38,
+        cantidad: 1
+      }
+    ]
+  };
+
+  const venta = await new CreateVentaCommand(db, ventaData).execute();
+
+  // 6. Confirmar venta registrada
+  const ventaGuardada = await new GetVentaCommand(db, venta.codigo).execute();
+  expect(ventaGuardada.numero).toBe(venta.codigo);
+
+  // 7. Eliminar venta
+  const result = await new DeleteVentaCommand(db, venta.codigo).execute();
+  expect(result).toEqual({ ok: true });
+
+  // 8. Verificar eliminación
+  await expect(new GetVentaCommand(db, venta.codigo).execute()).rejects.toThrow('Venta no encontrada');
+  const detalles = await new GetVentaDetalleCommand(db, venta.codigo).execute();
+  expect(detalles).toEqual([]);
 });

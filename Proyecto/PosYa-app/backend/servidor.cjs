@@ -4,16 +4,38 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
-
-// Importar los módulos de servicio de Factus
-const { enviarFacturaAFactus, descargarFacturaPdf, descargarFacturaXml } = require('./services/factus-factura.cjs');
-const { obtenerRangosDeNumeracion } = require('./services/factus-rangos.cjs'); // Puede que no necesites este directamente aquí, pero es útil tenerlo
+const { 
+    CreateVendedorCommand,
+    CreateClienteCommand,
+    UpdateClienteCommand,
+    DeleteClienteCommand,
+    CreateProductoCommand,
+    UpdateProductoCommand,
+    DeleteProductoCommand,
+    CreateVentaCommand,
+    DeleteVentaCommand,
+    CreateMovimientosInventarioCommand,
+    CreateTipoMovimientoCommand,
+    UpdateTipoMovimientoCommand,
+    DeleteTipoMovimientoCommand,
+    GetProductosCommand,
+    GetClientesCommand,
+    GetVendedorCommand,
+    GetVentaCommand,
+    GetVentaDetalleCommand,
+    GetHistorialVentasCommand,
+    GetTiposMovimientoCommand,
+    GetTipoMovimientoCommand,
+    GetExistenciasCommand,
+    GetMovimientosInventarioCommand,
+    GetMovimientosProductoCommand,
+    GetResumenMovimientosCommand,
+    GetReportesCommand,
+    GetProductosVendidosCommand
+} = require('./commands.cjs'); 
 
 const app = express();
 const PORT = 3000;
-
-
 
 app.use(cors());
 app.use(express.json());
@@ -39,1114 +61,439 @@ db.exec(sqlScript, (err) => {
   }
 });
 
-// --- ENDPOINTS DE LA API DE VENTA LOCAL (ejemplos, si los usas para obtener datos) ---
-// Estos endpoints son los que tu frontend usa para obtener los detalles de la venta y productos
-// Asegúrate de que estos ya existen o impleméntalos según tu base de datos
-app.get('/api/venta', (req, res) => {
-  const { codigo } = req.query;
-  db.get(`SELECT * FROM VENTA WHERE codigo = ?`, [codigo], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (!row) {
-      return res.status(404).json({ message: 'Venta no encontrada' });
-    }
-    res.json(row);
-  });
-});
+// -----------------------------------------------------------------------------------
+// Command Invoker
+// Este invocador se encarga de ejecutar los comandos de forma segura, manejando transacciones si es necesario
+// -----------------------------------------------------------------------------------
 
-app.get('/api/venta_detalle', (req, res) => {
-  const { codigo } = req.query;
-  db.all(`SELECT * FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?`, [codigo], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
+class CommandInvoker {
+    constructor(db) {
+        this.db = db;
     }
-    res.json(rows);
-  });
-});
 
-app.delete('/api/venta/:numero', (req, res) => {
-    const { numero } = req.params;
-    db.run(`DELETE FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?`, [numero], function(err) {
-        if (err) {
-            console.error('Error al eliminar detalles de venta:', err.message);
-            return res.status(500).json({ error: err.message });
-        }
-        db.run(`DELETE FROM VENTA WHERE numero = ?`, [numero], function(err) {
-            if (err) {
-                console.error('Error al eliminar venta:', err.message);
-                return res.status(500).json({ error: err.message });
+    async executeCommand(command) {
+        try {
+            // Solo inicia transacción si el comando lo requiere
+            if (command.requiresTransaction) {
+                await new Promise((resolve, reject) => {
+                    this.db.run('BEGIN TRANSACTION', [], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
             }
-            if (this.changes === 0) {
-                return res.status(404).json({ message: 'Venta no encontrada.' });
+
+            const result = await command.execute();
+
+            if (command.requiresTransaction) {
+                await new Promise((resolve, reject) => {
+                    this.db.run('COMMIT', [], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
             }
-            res.status(200).json({ message: 'Venta eliminada exitosamente.' });
-        });
-    });
-});
 
-
-
-
-// Endpoint para consultar existencias actuales de un producto
-app.get('/api/existencias/:codigo_producto', (req, res) => {
-  const codigo_producto = req.params.codigo_producto;
-  // Suma todas las entradas y salidas para ese producto
-  const query = `
-    SELECT IFNULL(SUM(CASE WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad
-                           WHEN t.tipo_flujo = 'Salida' THEN -m.cantidad
-                           ELSE 0 END), 0) AS existencias
-    FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
-    WHERE m.codigo_producto = ?
-  `;
-  db.get(query, [codigo_producto], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ existencias: row ? row.existencias : 0 });
-  });
-});
-
-// Endpoint para guardar movimientos de inventario
-app.post('/api/movimientos-inventario', express.json(), (req, res) => {
-  const movimientos = req.body;
-  if (!Array.isArray(movimientos) || movimientos.length === 0) {
-    return res.status(400).json({ error: 'No hay movimientos para guardar.' });
-  }
-  const stmt = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (fecha, cantidad, codigo_tipo_movimiento, codigo_producto) VALUES (?, ?, ?, ?)');
-  // Guardar la fecha en UTC (por defecto, como YYYY-MM-DD)
-  const fecha = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  try {
-    movimientos.forEach(mov => {
-      // Validar que los campos requeridos existan
-      if (!mov.codigo_producto || !mov.cantidad || !mov.codigo_tipo_movimiento) {
-        throw new Error('Faltan campos requeridos en algún movimiento.');
-      }
-      const codigo_tipo_movimiento_int = parseInt(mov.codigo_tipo_movimiento, 10);
-      stmt.run(fecha, mov.cantidad, codigo_tipo_movimiento_int, mov.codigo_producto);
-    });
-    stmt.finalize();
-    res.json({ ok: true });
-  } catch (err) {
-    stmt.finalize();
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Endpoint para obtener todos los movimientos de inventario con paginación
-app.get('/api/movimientos-inventario', (req, res) => {
-  const { page = 1, limit = 10, producto, tipoMovimiento, tipoFlujo, fechaInicio, fechaFin } = req.query;
-  const offset = (page - 1) * limit;
-
-  let query = `
-    SELECT 
-      m.id,
-      m.fecha,
-      m.cantidad,
-      m.codigo_tipo_movimiento,
-      t.nombre AS tipo_movimiento,
-      t.tipo_flujo,
-      m.codigo_producto,
-      p.nombre AS producto
-    FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
-    JOIN PRODUCTO p ON m.codigo_producto = p.codigo
-    WHERE 1=1
-  `;
-
-  const params = [];
-
-  // Filtros
-  if (producto) {
-    query += ' AND (m.codigo_producto = ? OR p.nombre LIKE ?)';
-    params.push(producto, `%${producto}%`);
-  }
-
-  if (tipoMovimiento) {
-    query += ' AND (m.codigo_tipo_movimiento = ? OR t.nombre LIKE ?)';
-    params.push(tipoMovimiento, `%${tipoMovimiento}%`);
-  }
-
-  if (tipoFlujo) {
-    query += ' AND t.tipo_flujo = ?';
-    params.push(tipoFlujo);
-  }
-
-  if (fechaInicio && fechaFin) {
-    // Usar las fechas tal cual, sin conversión, para evitar desfases
-    query += ' AND date(m.fecha) BETWEEN date(?) AND date(?)';
-    params.push(fechaInicio, fechaFin);
-  }
-
-
-  // Ordenación por fecha más reciente primero
-  query += ' ORDER BY m.fecha DESC, m.id DESC';
-
-  // Paginación
-  const queryCount = `SELECT COUNT(*) as total FROM (${query})`;
-  query += ` LIMIT ? OFFSET ?`;
-  params.push(Number(limit), Number(offset));
-
-  // Primero obtener el total de registros
-  db.get(queryCount, params.slice(0, -2), (errCount, countRow) => {
-    if (errCount) {
-      return res.status(500).json({ error: errCount.message });
-    }
-
-    // Luego obtener los datos paginados
-    db.all(query, params, (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-
-      res.json({
-        data: rows,
-        pagination: {
-          total: countRow.total,
-          page: Number(page),
-          limit: Number(limit),
-          totalPages: Math.ceil(countRow.total / limit)
+            return result;
+        } catch (error) {
+            if (command.requiresTransaction) {
+                await new Promise((resolve, reject) => {
+                    this.db.run('ROLLBACK', [], (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+            }
+            console.error(`Command failed: ${error.message}`);
+            throw error;
         }
-      });
-    });
-  });
-});
-
-// Endpoint para obtener el historial de movimientos de un producto específico
-app.get('/api/movimientos-inventario/producto/:codigo_producto', (req, res) => {
-  const { codigo_producto } = req.params;
-  const { limit = 50 } = req.query;
-
-  const query = `
-    SELECT 
-      m.id,
-      m.fecha,
-      m.cantidad,
-      t.nombre AS tipo_movimiento,
-      t.tipo_flujo,
-      CASE 
-        WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad
-        WHEN t.tipo_flujo = 'Salida' THEN -m.cantidad
-        ELSE 0
-      END AS cantidad_con_signo
-    FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
-    WHERE m.codigo_producto = ?
-    ORDER BY m.fecha DESC, m.id DESC
-    LIMIT ?
-  `;
-
-  db.all(query, [codigo_producto, Number(limit)], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
     }
-    res.json(rows);
-  });
-});
+}
 
-// Endpoint para obtener el resumen de movimientos por producto (para reportes)
-app.get('/api/movimientos-inventario/resumen', (req, res) => {
-  const { fechaInicio, fechaFin } = req.query;
+const invoker = new CommandInvoker(db);
 
-  let query = `
-    SELECT 
-      p.codigo,
-      p.nombre AS producto,
-      SUM(CASE WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad ELSE 0 END) AS entradas,
-      SUM(CASE WHEN t.tipo_flujo = 'Salida' THEN m.cantidad ELSE 0 END) AS salidas,
-      SUM(CASE WHEN t.tipo_flujo = 'Entrada' THEN m.cantidad ELSE -m.cantidad END) AS saldo
-    FROM MOVIMIENTO_INVENTARIO m
-    JOIN TIPO_MOVIMIENTO_INVENTARIO t ON m.codigo_tipo_movimiento = t.codigo
-    JOIN PRODUCTO p ON m.codigo_producto = p.codigo
-    WHERE 1=1
-  `;
 
-  const params = [];
 
-  if (fechaInicio && fechaFin) {
-    query += ' AND m.fecha BETWEEN ? AND ?';
-    params.push(fechaInicio, fechaFin);
-  }
+// -----------------------------------------------------------------------------------
+// Modulo Vendedor
+// Este comando se encarga de crear o actualizar un vendedor en la base de datos
+// -----------------------------------------------------------------------------------
 
-  query += ' GROUP BY p.codigo, p.nombre ORDER BY p.nombre';
-
-  db.all(query, params, (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
+// Endpoint para crear o actualizar el único vendedor
+app.post('/api/vendedor', express.json(), async (req, res) => {
+    try {
+        const command = new CreateVendedorCommand(db, req.body);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-    res.json(rows);
-  });
-});
-
-// Obtener el único vendedor (si existe)
-app.get('/api/vendedor', (req, res) => {
-  db.get('SELECT * FROM VENDEDOR LIMIT 1', [], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(204).send();
-    res.json(row);
-  });
-});
-
-// Crear o actualizar el único vendedor
-app.post('/api/vendedor', express.json(), (req, res) => {
-  db.run('DELETE FROM VENDEDOR', [], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    const v = req.body;
-    db.run(
-      `INSERT INTO VENDEDOR (NIT, nombre_o_razon_social, direccion, numero_de_contacto, municipio, responsabilidad_fiscal)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        v.NIT,
-        v.nombre_o_razon_social,
-        v.direccion,
-        v.numero_de_contacto,
-        v.municipio,
-        v.responsabilidad_fiscal
-      ],
-      function (err2) {
-        if (err2) return res.status(500).json({ error: err2.message });
-        res.json({ ok: true });
-      }
-    );
-  });
-});
-
-// Endpoint: generar reporte
-app.get('/api/reportes', (req, res) => {
-  const { producto, fechaInicio, fechaFin } = req.query;
-  let query = `
-    SELECT
-      dpv.nombre_producto AS producto,
-      SUM(dpv.monto) AS ingresos,
-      SUM(dpv.cantidad * dpv.costo_unitario) AS costos,
-      SUM(dpv.monto - (dpv.cantidad * dpv.costo_unitario)) AS utilidades,
-      SUM(dpv.IVA_unitario * dpv.cantidad) AS iva
-    FROM DETALLE_PRODUCTO_VENDIDO dpv
-    JOIN VENTA v ON dpv.codigo_venta = v.codigo
-    WHERE 1=1`;
-
-  const params = [];
-
-  if (producto) {
-    query += ' AND dpv.nombre_producto = ?';
-    params.push(producto);
-  }
-
-  if (fechaInicio && fechaFin) {
-    query += ' AND v.fecha BETWEEN ? AND ?';
-    params.push(fechaInicio, fechaFin);
-  }
-
-  query += ' GROUP BY dpv.nombre_producto';
-
-  db.all(query, params, (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      res.json(rows);
-    }
-  });
-});
-
-// Endpoint para obtener productos vendidos
-app.get('/api/productos-vendidos', (req, res) => {
-  const query = `
-    SELECT DISTINCT dpv.nombre_producto AS nombre
-    FROM DETALLE_PRODUCTO_VENDIDO dpv
-    ORDER BY nombre;
-  `;
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
-
-// Endpoint para obtener historial de ventas
-app.get('/api/historial_ventas', (req, res) => {
-  const query = `
-    SELECT 
-      codigo AS numero,
-      fecha AS fecha,
-      hora AS hora,
-      nombre_cliente || ' ' || IFNULL(apellido_cliente, '') AS cliente,
-      razon_social_cliente,
-      total AS total
-    FROM VENTA
-    ORDER BY fecha DESC, hora DESC
-  `;
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      // Formatear el total como moneda
-      const ventas = rows.map(v => ({
-        ...v,
-        total: typeof v.total === 'number' ? `$${v.total.toFixed(2)}` : v.total
-      }));
-      res.json(ventas);
-    }
-  });
-});
-
-// Endpoint para obtener detalle de productos vendidos en una venta
-app.get('/api/venta_detalle', (req, res) => {
-  const codigo = req.query.codigo;
-  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
-
-  const query = `
-    SELECT 
-      nombre_producto,
-      cantidad,
-      precio_unitario,
-      submonto,
-      IVA_unitario,
-      monto
-    FROM DETALLE_PRODUCTO_VENDIDO
-    WHERE codigo_venta = ?
-  `;
-  db.all(query, [codigo], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-// Endpoint para obtener información general de una venta
-app.get('/api/venta', (req, res) => {
-  const codigo = req.query.codigo;
-  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
-
-  const query = `
-    SELECT 
-      codigo AS numero,
-      fecha AS fecha,
-      hora AS hora,
-      -- Si hay razón social, úsala; si no, concatena nombre y apellido
-      CASE 
-        WHEN razon_social_cliente IS NOT NULL AND TRIM(razon_social_cliente) != '' THEN razon_social_cliente
-        ELSE TRIM(nombre_cliente || ' ' || IFNULL(apellido_cliente, ''))
-      END AS cliente,
-      total AS total,
-      direccion_cliente AS direccion_cliente,
-      correo_electronico_cliente AS correo_cliente,
-      numero_telefonico_cliente AS numero_telefonico_cliente,
-      nombre_o_razon_social_vendedor AS vendedor,
-      NIT_vendedor AS nit_vendedor,
-      direccion_vendedor AS direccion_vendedor,
-      numero_de_contacto_vendedor AS contacto_vendedor,
-      municipio_vendedor AS municipio_vendedor,
-      responsabilidad_fiscal_vendedor AS responsabilidad_fiscal_vendedor
-    FROM VENTA
-    WHERE codigo = ?
-  `;
-  db.get(query, [codigo], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: 'Venta no encontrada' });
-    row.total = typeof row.total === 'number' ? `$${row.total.toFixed(2)}` : row.total;
-    res.json(row);
-  });
 });
 
 
-// Endpoint para obtener tipos de movimiento de inventario
-app.get('/api/tipos-movimiento', (req, res) => {
-  const query = 'SELECT codigo, nombre, tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO';
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
 
-// Endpoint para eliminar un tipo de movimiento de inventario
-app.delete('/api/tipos-movimiento/:codigo', (req, res) => {
-  const codigo = req.params.codigo;
-  db.run('DELETE FROM TIPO_MOVIMIENTO_INVENTARIO WHERE codigo = ?', [codigo], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
-    }
-    res.json({ ok: true });
-  });
-});
-
-// Endpoint para crear un tipo de movimiento de inventario
-app.post('/api/tipos-movimiento', (req, res) => {
-  const { nombre, tipo_flujo } = req.body;
-  if (!nombre || !tipo_flujo) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' });
-  }
-  db.run(
-  'INSERT INTO TIPO_MOVIMIENTO_INVENTARIO (nombre, tipo_flujo) VALUES (?, ?)',
-  [nombre, tipo_flujo],
-  function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ ok: true, codigo: this.lastID });
-  });
-});
-
-// Endpoint para obtener un tipo de movimiento por código
-app.get('/api/tipos-movimiento/:codigo', (req, res) => {
-  const codigo = req.params.codigo;
-  db.get('SELECT codigo, nombre, tipo_flujo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE codigo = ?', [codigo], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (!row) {
-      return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
-    }
-    res.json(row);
-  });
-});
-
-// Endpoint para actualizar un tipo de movimiento
-app.put('/api/tipos-movimiento/:codigo', (req, res) => {
-  const codigo = req.params.codigo;
-  const { nombre, tipo_flujo } = req.body;
-  if (!nombre || !tipo_flujo) {
-    return res.status(400).json({ error: 'Faltan campos requeridos '});
-  }
-  db.run(
-    'UPDATE TIPO_MOVIMIENTO_INVENTARIO SET nombre = ?, tipo_flujo = ? WHERE codigo = ?',
-    [nombre, tipo_flujo, codigo],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
-      }
-      res.json({ ok: true });
-    }
-  );
-});
+// -----------------------------------------------------------------------------------
+// Modulo Cliente
+// Estos comandos se encargan de crear, actualizar o eliminar un cliente en la base de datos
+// -----------------------------------------------------------------------------------
 
 // Endpoint para crear un cliente
-app.post('/api/clientes', (req, res) => {
-  const {
-    tipoCliente,
-    primerNombre,
-    segundoNombre,
-    primerApellido,
-    segundoApellido,
-    razonSocial,
-    tipoDocumento,
-    numeroDocumento,
-    direccion,
-    ciudad, 
-    numero_telefonico, 
-    correo_electronico
-  } = req.body;
-
-  if (!numeroDocumento || !correo_electronico) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios' });
-  }
-
-  db.serialize(() => {
-    // Insertar en CLIENTE
-    db.run(
-      'INSERT OR REPLACE INTO CLIENTE (identificacion, direccion, correo_electronico, ciudad, numero_telefonico) VALUES (?, ?, ?, ?, ?)',
-      [numeroDocumento, direccion || '', correo_electronico, ciudad || '', numero_telefonico || ''],
-      function (err) {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
-        if (tipoCliente === 'natural') {
-          // Construir nombre y apellido completos
-          const nombreCompleto = [primerNombre, segundoNombre].filter(Boolean).join(' ');
-          const apellidoCompleto = [primerApellido, segundoApellido].filter(Boolean).join(' ');
-          // Insertar en CLIENTE_NATURAL
-          db.run(
-            'INSERT OR REPLACE INTO CLIENTE_NATURAL (identificacion, tipo_de_documento, nombre, apellido) VALUES (?, ?, ?, ?)',
-            [numeroDocumento, tipoDocumento || '', nombreCompleto, apellidoCompleto],
-            function (err2) {
-              if (err2) {
-                return res.status(500).json({ error: err2.message });
-              }
-              res.status(201).json({
-                tipo: 'natural',
-                id: numeroDocumento,
-                primerNombre,
-                segundoNombre,
-                primerApellido,
-                segundoApellido,
-                tipoDocumento,
-                numeroDocumento,
-                direccion,
-                ciudad,
-                numero_telefonico,
-                correo_electronico
-              });
-            }
-          );
-        } else if (tipoCliente === 'juridica') {
-          // Insertar en CLIENTE_JURIDICO
-          db.run(
-            'INSERT OR REPLACE INTO CLIENTE_JURIDICO (identificacion, razon_social) VALUES (?, ?)',
-            [numeroDocumento, razonSocial],
-            function (err2) {
-              if (err2) {
-                return res.status(500).json({ error: err2.message });
-              }
-              res.status(201).json({
-                tipo: 'juridica',
-                id: numeroDocumento,
-                razonSocial,
-                tipoDocumento: 'NIT',
-                numeroDocumento,
-                direccion,
-                ciudad,
-                numero_telefonico,
-                correo_electronico
-              });
-            }
-          );
-        } else {
-          res.status(400).json({ error: 'Tipo de cliente desconocido' });
-        }
-      }
-    );
-  });
-});
-
-// Endpoint para obtener todos los clientes
-app.get('/api/clientes', (req, res) => {
-  // Consulta clientes base
-  const queryClientes = `SELECT identificacion, direccion, correo_electronico, ciudad, numero_telefonico FROM CLIENTE`;
-  db.all(queryClientes, [], (err, clientes) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!clientes.length) return res.json([]);
-
-    // Consultar detalles de naturales y jurídicos
-    const ids = clientes.map(c => `'${c.identificacion}'`).join(',');
-    const queryNaturales = `SELECT * FROM CLIENTE_NATURAL WHERE identificacion IN (${ids})`;
-    const queryJuridicos = `SELECT * FROM CLIENTE_JURIDICO WHERE identificacion IN (${ids})`;
-
-    db.all(queryNaturales, [], (err2, naturales) => {
-      if (err2) return res.status(500).json({ error: err2.message });
-      db.all(queryJuridicos, [], (err3, juridicos) => {
-        if (err3) return res.status(500).json({ error: err3.message });
-        // Unir datos
-        const naturalesMap = Object.fromEntries(naturales.map(n => [n.identificacion, n]));
-        const juridicosMap = Object.fromEntries(juridicos.map(j => [j.identificacion, j]));
-        const resultado = clientes.map(c => {
-          if (naturalesMap[c.identificacion]) {
-            const n = naturalesMap[c.identificacion];
-            return {
-              tipo: 'natural',
-              id: c.identificacion,
-              primerNombre: (n.nombre || '').split(' ')[0] || '',
-              segundoNombre: (n.nombre || '').split(' ').slice(1).join(' '),
-              primerApellido: (n.apellido || '').split(' ')[0] || '',
-              segundoApellido: (n.apellido || '').split(' ').slice(1).join(' '),
-              tipoDocumento: n.tipo_de_documento,
-              numeroDocumento: c.identificacion,
-              direccion: c.direccion,
-              ciudad: c.ciudad,
-              numero_telefonico: c.numero_telefonico,
-              correo_electronico: c.correo_electronico
-            };
-          } else if (juridicosMap[c.identificacion]) {
-            const j = juridicosMap[c.identificacion];
-            return {
-              tipo: 'juridica', // Siempre 'juridica' (femenino)
-              id: c.identificacion,
-              razonSocial: j.razon_social,
-              tipoDocumento: 'NIT',
-              numeroDocumento: c.identificacion,
-              direccion: c.direccion,
-              ciudad: c.ciudad,
-              numero_telefonico: c.numero_telefonico,
-              correo_electronico: c.correo_electronico
-            };
-          } else {
-            // Cliente sin detalle
-            return {
-              tipo: 'desconocido',
-              id: c.identificacion,
-              numeroDocumento: c.identificacion,
-              direccion: c.direccion,
-              ciudad: c.ciudad,
-              numero_telefonico: c.numero_telefonico,
-              correo_electronico: c.correo_electronico
-            };
-          }
-        });
-        res.json(resultado);
-      });
-    });
-  });
+app.post('/api/clientes', express.json(), async (req, res) => {
+    try {
+        const command = new CreateClienteCommand(db, req.body);
+        const result = await invoker.executeCommand(command);
+        res.status(201).json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Endpoint para actualizar un cliente
-app.put('/api/clientes/:id', (req, res) => {
-  const id = req.params.id;
-  const {
-    tipoCliente,
-    primerNombre,
-    segundoNombre,
-    primerApellido,
-    segundoApellido,
-    razonSocial,
-    tipoDocumento,
-    numeroDocumento,
-    direccion,
-    ciudad,
-    numero_telefonico,
-    correo_electronico
-  } = req.body;
-
-  if (!numeroDocumento || !correo_electronico) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios' });
-  }
-
-  db.serialize(() => {
-    // Actualizar CLIENTE
-    db.run(
-      'UPDATE CLIENTE SET direccion = ?, correo_electronico = ?, ciudad = ?, numero_telefonico = ? WHERE identificacion = ?',
-      [direccion || '', correo_electronico, ciudad || '', numero_telefonico || '', id],
-      function (err) {
-        if (err) {
-          return res.status(500).json({ error: err.message });
-        }
-        if (tipoCliente === 'natural') {
-          // Actualizar CLIENTE_NATURAL
-          const nombreCompleto = [primerNombre, segundoNombre].filter(Boolean).join(' ');
-          const apellidoCompleto = [primerApellido, segundoApellido].filter(Boolean).join(' ');
-          db.run(
-            'UPDATE CLIENTE_NATURAL SET tipo_de_documento = ?, nombre = ?, apellido = ? WHERE identificacion = ?',
-            [tipoDocumento || '', nombreCompleto, apellidoCompleto, id],
-            function (err2) {
-              if (err2) {
-                return res.status(500).json({ error: err2.message });
-              }
-              // Devolver el cliente actualizado
-              res.json({
-                tipo: 'natural',
-                id,
-                primerNombre,
-                segundoNombre,
-                primerApellido,
-                segundoApellido,
-                tipoDocumento,
-                numeroDocumento: id,
-                direccion,
-                ciudad,
-                numero_telefonico,
-                correo_electronico
-              });
-            }
-          );
-        } else if (tipoCliente === 'juridica') {
-          // Actualizar CLIENTE_JURIDICO
-          db.run(
-            'UPDATE CLIENTE_JURIDICO SET razon_social = ? WHERE identificacion = ?',
-            [razonSocial, id],
-            function (err2) {
-              if (err2) {
-                return res.status(500).json({ error: err2.message });
-              }
-              res.json({
-                tipo: 'juridica',
-                id,
-                razonSocial,
-                tipoDocumento: 'NIT',
-                numeroDocumento: id,
-                direccion,
-                ciudad,
-                numero_telefonico,
-                correo_electronico
-              });
-            }
-          );
-        } else {
-          res.status(400).json({ error: `Tipo de cliente desconocido: ${tipoCliente}` });
-        }
-      }
-    );
-  });
+app.put('/api/clientes/:id', express.json(), async (req, res) => {
+    try {
+        const command = new UpdateClienteCommand(db, req.params.id, req.body);
+        const result = await command.execute();
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Endpoint para eliminar un cliente
-app.delete('/api/clientes/:id', (req, res) => {
-  const { id } = req.params;
-  if (!id) {
-    return res.status(400).json({ error: 'Se requiere el ID del cliente' });
-  }
-
-  // Usamos serialize para asegurar que las eliminaciones se ejecuten en orden.
-  // Esto elimina al cliente de las tablas de detalle y luego de la tabla principal.
-  db.serialize(() => {
-    db.run('DELETE FROM CLIENTE_NATURAL WHERE identificacion = ?', [id]);
-    db.run('DELETE FROM CLIENTE_JURIDICO WHERE identificacion = ?', [id]);
-    db.run('DELETE FROM CLIENTE WHERE identificacion = ?', [id], function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Cliente no encontrado' });
-      }
-      res.json({ ok: true, message: 'Cliente eliminado correctamente' });
-    });
-  });
+app.delete('/api/clientes/:id', async (req, res) => {
+    try {
+        const command = new DeleteClienteCommand(db, req.params.id);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// Endpoint para crear productos
-app.post('/api/productos', (req, res) => {
-  const {
-    codigo,
-    nombre,
-    costoUnitario,
-    precioUnitario,
-    descripcion,
-    exentoIVA,
-    tipoIVA
-  } = req.body;
-
-  // Validaciones
-  if (!nombre || isNaN(costoUnitario) || isNaN(precioUnitario)) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios o son inválidos' });
-  }
-
-  // Calcular tasa de IVA
-  const tasaIVA = exentoIVA ? 0 : (parseFloat(tipoIVA) || 0.19);
-  
-  console.log("Tasa de IVA calculada:", tasaIVA);
 
 
-  db.run(
-    `INSERT INTO PRODUCTO (
-      codigo, nombre, costo_unitario, precio, 
-      descripcion, estado, tasa_IVA
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      codigo,
-      nombre,
-      costoUnitario,
-      precioUnitario,
-      descripcion || '',
-      'activo',
-      tasaIVA
-    ],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({
-        codigo,
-        nombre,
-        costoUnitario,
-        precioUnitario,
-        descripcion,
-        estado: 'activo',
-        exentoIVA,
-        tipoIVA: tasaIVA
-      });
-    }
-  );
-});
+// -----------------------------------------------------------------------------------
+// Modulo Producto
+// Estos comandos se encargan de crear, actualizar o eliminar productos en la base de datos
+// -----------------------------------------------------------------------------------
 
-// Endpoint para obtener todos los productos
-app.get('/api/productos', (req, res) => {
-  const query = `
-    SELECT 
-      p.codigo AS codigo,
-      p.nombre AS nombre,
-      p.precio AS precioUnitario,
-      p.costo_unitario AS costoUnitario,
-      p.descripcion AS descripcion,
-      p.tasa_IVA AS tipoIVA,
-      p.estado AS estado
-    FROM PRODUCTO p
-    ORDER BY p.nombre
-  `;
-  
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
-
-// Endpoint para registrar una nueva venta y sus productos
-app.post('/api/venta', express.json(), async (req, res) => {
-  try {
-    const v = req.body;
-    // Validaciones mínimas
-    if (!v || !v.fecha || !v.hora || !v.identificacion_cliente || !Array.isArray(v.productos) || v.productos.length === 0) {
-      return res.status(400).json({ error: 'Datos de venta incompletos' });
-    }
-
-    // Generar un código secuencial para la venta: V + número correlativo, total 10 caracteres
-    const getNextVentaNumber = async () => {
-      return await new Promise((resolve, reject) => {
-        db.get('SELECT COUNT(*) as total FROM VENTA', [], (err, row) => {
-          if (err) reject(err);
-          else resolve(row.total + 1); // Siguiente número
-        });
-      });
-    };
-    const nextVentaNum = await getNextVentaNumber();
-    // Formato: V + ceros + número, total 10 caracteres
-    const codigoVenta = 'V' + String(nextVentaNum).padStart(9, '0');
-
-    // Buscar cliente seleccionado
-    const cliente = await new Promise((resolve, reject) => {
-      db.get('SELECT * FROM CLIENTE WHERE identificacion = ?', [v.identificacion_cliente], (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-    if (!cliente) return res.status(400).json({ error: 'Cliente no encontrado' });
-
-    // Buscar si es natural o jurídico
-    const clienteNatural = await new Promise((resolve) => {
-      db.get('SELECT * FROM CLIENTE_NATURAL WHERE identificacion = ?', [v.identificacion_cliente], (err, row) => {
-        resolve(row);
-      });
-    });
-    const clienteJuridico = await new Promise((resolve) => {
-      db.get('SELECT * FROM CLIENTE_JURIDICO WHERE identificacion = ?', [v.identificacion_cliente], (err, row) => {
-        resolve(row);
-      });
-    });
-
-    // Calcular subtotal y total
-    let subtotal = 0, total = 0;
-    v.productos.forEach(p => {
-      const precio = parseFloat(p.precio_unitario) || 0;
-      const iva = parseFloat(p.IVA_unitario) || 0;
-      const cantidad = parseFloat(p.cantidad) || 0;
-      subtotal += precio * cantidad;
-      total += (precio + iva) * cantidad;
-    });
-
-    // Insertar la venta
-    await new Promise((resolve, reject) => {
-      db.run(
-        `INSERT INTO VENTA (
-          codigo, fecha, hora, subtotal, total,
-          identificacion_cliente, tipo_identificacion_cliente,
-          nombre_cliente, apellido_cliente, razon_social_cliente,
-          direccion_cliente, numero_telefonico_cliente, ciudad_cliente, correo_electronico_cliente,
-          nombre_o_razon_social_vendedor, NIT_vendedor, direccion_vendedor, numero_de_contacto_vendedor, municipio_vendedor, responsabilidad_fiscal_vendedor
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          codigoVenta,
-          v.fecha,
-          v.hora,
-          subtotal,
-          total,
-          v.identificacion_cliente,
-          clienteNatural ? (clienteNatural.tipo_de_documento || 'CC') : 'NIT',
-          clienteNatural ? clienteNatural.nombre : null,
-          clienteNatural ? clienteNatural.apellido : null,
-          clienteJuridico ? clienteJuridico.razon_social : null,
-          cliente.direccion,
-          cliente.numero_telefonico,
-          cliente.ciudad,
-          cliente.correo_electronico,
-          v.nombre_o_razon_social_vendedor,
-          v.NIT_vendedor,
-          v.direccion_vendedor,
-          v.numero_de_contacto_vendedor,
-          v.municipio_vendedor,
-          v.responsabilidad_fiscal_vendedor
-        ],
-        function (err) {
-          if (err) reject(err);
-          else resolve();
+// Endpoint para crear un producto
+app.post('/api/productos', express.json(), async (req, res) => {
+    try {
+        console.log('Datos recibidos para producto:', req.body); // Para depuración
+        
+        if (!req.body.codigo) {
+            req.body.codigo = `PROD-${Date.now()}`; // Generar código si no viene
         }
-      );
-    });
-
-    // Insertar los productos vendidos (detalle)
-    const stmtDet = db.prepare('INSERT INTO DETALLE_PRODUCTO_VENDIDO (nombre_producto, cantidad, precio_unitario, costo_unitario, IVA_unitario, submonto, monto, codigo_venta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-    for (const p of v.productos) {
-      // Para asegurar que el costo es el correcto, lo traemos de la BD
-      const prodInfo = await new Promise((resolve) => {
-        db.get('SELECT costo_unitario FROM PRODUCTO WHERE nombre = ?', [p.nombre], (err, row) => {
-          resolve(row); // Resuelve con la fila o undefined si no se encuentra
-        });
-      });
-
-      const precio = parseFloat(p.precio_unitario) || 0;
-      const iva = parseFloat(p.IVA_unitario) || 0;
-      const cantidad = parseFloat(p.cantidad) || 0;
-      const costo = prodInfo ? (parseFloat(prodInfo.costo_unitario) || 0) : 0;
-      const submonto = precio * cantidad;
-      const monto = (precio + iva) * cantidad;
-      stmtDet.run(
-        p.nombre,
-        cantidad,
-        precio,
-        costo,
-        iva,
-        submonto,
-        monto,
-        codigoVenta
-      );
+        
+        const command = new CreateProductoCommand(db, req.body);
+        const result = await invoker.executeCommand(command);
+        res.status(201).json(result);
+    } catch (err) {
+        console.error('Error al crear producto:', err); // Para depuración
+        res.status(500).json({ error: err.message });
     }
-    stmtDet.finalize();
-
-    // Registrar movimientos de inventario (salida por venta)
-    // Buscar el codigo para "Venta de productos"
-    const tipCodigoVenta = await new Promise((resolve, reject) => {
-      db.get("SELECT codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tipo_flujo = 'Salida' AND nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
-        if (err) reject(err);
-        else resolve(row ? row.codigo : null);
-      });
-    });
-    if (!tipCodigoVenta) {
-      return res.status(500).json({ error: 'No se encontró el tipo de movimiento para venta.' });
-    }
-    const stmtMov = db.prepare('INSERT INTO MOVIMIENTO_INVENTARIO (fecha, cantidad, codigo_tipo_movimiento, codigo_producto) VALUES (?, ?, ?, ?)');
-    for (const p of v.productos) {
-      // Buscar el código del producto
-      const prod = await new Promise((resolve) => {
-        db.get('SELECT codigo FROM PRODUCTO WHERE nombre = ?', [p.nombre], (err, row) => {
-          resolve(row);
-        });
-      });
-      if (prod && prod.codigo) {
-        stmtMov.run(v.fecha, Number(p.cantidad), tipCodigoVenta, prod.codigo);
-      }
-    }
-    stmtMov.finalize();
-    res.json({ ok: true, codigo: codigoVenta });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Endpoint para eliminar una venta y sus movimientos de inventario
-app.delete('/api/venta/:codigo', async (req, res) => {
-  const codigo = req.params.codigo;
-  if (!codigo) return res.status(400).json({ error: 'Código requerido' });
-  try {
-    // Eliminar movimientos de inventario asociados a la venta
-    // Primero obtener los productos de la venta
-    const productos = await new Promise((resolve, reject) => {
-      db.all('SELECT nombre_producto, cantidad FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?', [codigo], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-    // Buscar codigo para "Venta de productos"
-    const tipCodigoVenta = await new Promise((resolve, reject) => {
-      db.get("SELECT codigo FROM TIPO_MOVIMIENTO_INVENTARIO WHERE tipo_flujo = 'Salida' AND nombre LIKE '%Venta%' LIMIT 1", [], (err, row) => {
-        if (err) reject(err);
-        else resolve(row ? row.codigo : null);
-      });
-    });
-    if (tipCodigoVenta) {
-      for (const p of productos) {
-        // Buscar el código del producto
-        const prod = await new Promise((resolve) => {
-          db.get('SELECT codigo FROM PRODUCTO WHERE nombre = ?', [p.nombre_producto], (err, row) => {
-            resolve(row);
-          });
-        });
-        if (prod && prod.codigo) {
-          // Eliminar movimientos de inventario de salida por venta para este producto y venta
-          await new Promise((resolve, reject) => {
-            db.run('DELETE FROM MOVIMIENTO_INVENTARIO WHERE codigo_producto = ? AND codigo_tipo_movimiento = ? AND cantidad = ? AND fecha = (SELECT fecha FROM VENTA WHERE codigo = ?)', [prod.codigo, tipCodigoVenta, p.cantidad, codigo], function(err) {
-              if (err) reject(err);
-              else resolve();
-            });
-          });
-        }
-      }
-    }
-    // Eliminar detalle de productos vendidos
-    await new Promise((resolve, reject) => {
-      db.run('DELETE FROM DETALLE_PRODUCTO_VENDIDO WHERE codigo_venta = ?', [codigo], function(err) {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-    // Eliminar la venta
-    await new Promise((resolve, reject) => {
-      db.run('DELETE FROM VENTA WHERE codigo = ?', [codigo], function(err) {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Endpoint para eliminar un producto
-app.delete('/api/productos/:codigo', (req, res) => {
-  const { codigo } = req.params;
-  
-  db.serialize(() => {
-
-    // Luego eliminar de la tabla principal
-    db.run('DELETE FROM PRODUCTO WHERE codigo = ?', [codigo], function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Producto no encontrado' });
-      }
-      res.json({ ok: true });
-    });
-  });
 });
 
 // Endpoint para actualizar un producto
-app.put('/api/productos/:codigo', (req, res) => {
-  const codigo = req.params.codigo;
-  const {
-    nombre,
-    costoUnitario,
-    precioUnitario,
-    descripcion,
-    estado = 'activo',
-    tipoIVA,
-    exentoIVA
-  } = req.body;
-
-  if (!codigo || !nombre || isNaN(costoUnitario) || isNaN(precioUnitario)) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios o datos inválidos' });
-  }
-
-  const tasaIVA = exentoIVA ? 0 : (parseFloat(tipoIVA) || 0.19);
-
-  db.run(
-    `UPDATE PRODUCTO
-     SET nombre = ?, costo_unitario = ?, precio = ?, descripcion = ?, estado = ?, tasa_IVA = ?
-     WHERE codigo = ?`,
-    [nombre, costoUnitario, precioUnitario, descripcion || '', estado, tasaIVA, codigo],
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Producto no encontrado' });
-      }
-      res.json({
-        codigo,
-        nombre,
-        costoUnitario,
-        precioUnitario,
-        descripcion,
-        estado,
-        tipoIVA: tasaIVA,
-        exentoIVA
-      });
+app.put('/api/productos/:codigo', express.json(), async (req, res) => {
+    try {
+        const command = new UpdateProductoCommand(db, req.params.codigo, req.body);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-  );
 });
+
+// Endpoint para eliminar un producto
+app.delete('/api/productos/:codigo', async (req, res) => {
+    try {
+        const command = new DeleteProductoCommand(db, req.params.codigo);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// -----------------------------------------------------------------------------------
+// Modulo Venta
+// Estos comandos se encargan de crear o eliminar una venta en la base de datos
+// -----------------------------------------------------------------------------------
+
+// Endpoint para registrar una venta
+app.post('/api/venta', express.json(), async (req, res) => {
+    try {
+        const command = new CreateVentaCommand(db, req.body);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para eliminar una venta
+app.delete('/api/venta/:codigo', async (req, res) => {
+    try {
+        const command = new DeleteVentaCommand(db, req.params.codigo);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// -----------------------------------------------------------------------------------
+// Modulo Movimientos de Inventario
+// Este comando se encarga de crear movimientos de inventario en la base de datos
+// -----------------------------------------------------------------------------------
+
+// Endpoint para crear un tipo de movimiento de inventario
+app.post('/api/tipos-movimiento', express.json(), async (req, res) => {
+    try {
+        const command = new CreateTipoMovimientoCommand(db, req.body);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// -----------------------------------------------------------------------------------
+// Modulo Tipo Movimiento
+// Estos comandos se encargan de crear, actualizar o eliminar tipos de movimiento en la base de datos
+// -----------------------------------------------------------------------------------
+
+
+// Endpoint para guardar movimientos de inventario
+app.post('/api/movimientos-inventario', express.json(), async (req, res) => {
+    try {
+        const command = new CreateMovimientosInventarioCommand(db, req.body);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para actualizar un tipo de movimiento
+app.put('/api/tipos-movimiento/:codigo', express.json(), async (req, res) => {
+    try {
+        const command = new UpdateTipoMovimientoCommand(db, req.params.codigo, req.body);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para eliminar un tipo de movimiento
+app.delete('/api/tipos-movimiento/:codigo', async (req, res) => {
+    try {
+        const command = new DeleteTipoMovimientoCommand(db, req.params.codigo);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// -----------------------------------------------------------------------------------
+// Modulo Consultas
+// Estos comandos se encargan de realizar consultas específicas a la base de datos
+// -----------------------------------------------------------------------------------
+
+// Endpoint para consultar existencias actuales de un producto
+app.get('/api/existencias/:codigo_producto', async (req, res) => {
+    try {
+        const command = new GetExistenciasCommand(db, req.params.codigo_producto);
+        const existencias = await invoker.executeCommand(command);
+        res.json(existencias);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener todos los movimientos de inventario con paginación
+app.get('/api/movimientos-inventario', async (req, res) => {
+    try {
+        const filters = {
+            page: req.query.page,
+            limit: req.query.limit,
+            producto: req.query.producto,
+            tipoMovimiento: req.query.tipoMovimiento,
+            tipoFlujo: req.query.tipoFlujo,
+            fechaInicio: req.query.fechaInicio,
+            fechaFin: req.query.fechaFin
+        };
+        
+        const command = new GetMovimientosInventarioCommand(db, filters);
+        const result = await invoker.executeCommand(command);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener el historial de movimientos de un producto específico
+app.get('/api/movimientos-inventario/producto/:codigo_producto', async (req, res) => {
+    try {
+        const command = new GetMovimientosProductoCommand(
+            db, 
+            req.params.codigo_producto, 
+            req.query.limit
+        );
+        const movimientos = await invoker.executeCommand(command);
+        res.json(movimientos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener el resumen de movimientos por producto (para reportes)
+app.get('/api/movimientos-inventario/resumen', async (req, res) => {
+    try {
+        const command = new GetResumenMovimientosCommand(db, {
+            fechaInicio: req.query.fechaInicio,
+            fechaFin: req.query.fechaFin
+        });
+        const resumen = await invoker.executeCommand(command);
+        res.json(resumen);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener el único vendedor
+app.get('/api/vendedor', async (req, res) => {
+    try {
+        const command = new GetVendedorCommand(db);
+        const vendedor = await invoker.executeCommand(command);
+        if (!vendedor) return res.status(204).send();
+        res.json(vendedor);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para generar reporte
+app.get('/api/reportes', async (req, res) => {
+    try {
+        const command = new GetReportesCommand(db, {
+            producto: req.query.producto,
+            fechaInicio: req.query.fechaInicio,
+            fechaFin: req.query.fechaFin
+        });
+        const reporte = await invoker.executeCommand(command);
+        res.json(reporte);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener productos vendidos
+app.get('/api/productos-vendidos', async (req, res) => {
+    try {
+        const command = new GetProductosVendidosCommand(db);
+        const productos = await invoker.executeCommand(command);
+        res.json(productos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener historial de ventas
+app.get('/api/historial_ventas', async (req, res) => {
+    try {
+        const command = new GetHistorialVentasCommand(db);
+        const ventas = await invoker.executeCommand(command);
+        res.json(ventas);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener detalle de productos vendidos en una venta
+app.get('/api/venta_detalle', async (req, res) => {
+    try {
+        const codigo = req.query.codigo;
+        if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+        
+        const command = new GetVentaDetalleCommand(db, codigo);
+        const detalle = await invoker.executeCommand(command);
+        res.json(detalle);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener tipos de movimiento de inventario
+app.get('/api/tipos-movimiento', async (req, res) => {
+    try {
+        const command = new GetTiposMovimientoCommand(db);
+        const tipos = await invoker.executeCommand(command);
+        res.json(tipos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener un tipo de movimiento por código
+app.get('/api/tipos-movimiento/:codigo', async (req, res) => {
+    try {
+        const command = new GetTipoMovimientoCommand(db, req.params.codigo);
+        const tipo = await invoker.executeCommand(command);
+        res.json(tipo);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener todos los clientes
+app.get('/api/clientes', async (req, res) => {
+    try {
+        const command = new GetClientesCommand(db);
+        const clientes = await invoker.executeCommand(command);
+        res.json(clientes);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener todos los productos
+app.get('/api/productos', async (req, res) => {
+    try {
+        const command = new GetProductosCommand(db);
+        const productos = await invoker.executeCommand(command);
+        res.json(productos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener información general de una venta
+app.get('/api/venta', async (req, res) => {
+    try {
+        const codigo = req.query.codigo;
+        if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+        
+        const command = new GetVentaCommand(db, codigo);
+        const venta = await invoker.executeCommand(command);
+        res.json(venta);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 // --- NUEVOS ENDPOINTS PARA LA API DE FACTUS ---
 
