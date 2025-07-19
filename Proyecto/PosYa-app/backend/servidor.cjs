@@ -1282,7 +1282,7 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
         });
 
         return {
-          "code_reference": toString(item.codigo_producto), // Código de referencia del producto (desde DETALLE_PRODUCTO_VENDIDO.codigo_producto)
+          "code_reference": codigoVenta, // Código de referencia del producto (desde DETALLE_PRODUCTO_VENDIDO.codigo_producto)
           "name": item.nombre_producto, // Nombre del producto (desde DETALLE_PRODUCTO_VENDIDO.nombre_producto)
           "quantity": item.cantidad, // Cantidad vendida (desde DETALLE_PRODUCTO_VENDIDO.cantidad)
           "discount_rate": 0, // Tasa de descuento del ítem - Mapear desde su DB si aplica (ej. DETALLE_PRODUCTO_VENDIDO.discount_rate)
