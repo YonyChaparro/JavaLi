@@ -1233,7 +1233,7 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
 
     const facturaParaFactus = {
       "document": "01", // Tipo de documento (Factura de Venta) - Fijo según Factus
-      "reference_code": toString(codigoVenta), // Código de referencia de su venta local (desde VENTA.codigo)
+      "reference_code": codigoVenta, // Código de referencia de su venta local (desde VENTA.codigo)
       "observation": "", // Campo de observación, puede ser mapeado desde VENTA.observacion si existe
       "payment_method_code": "10", // Código de método de pago (ej. 10: Efectivo) - Mapear desde su DB (ej. VENTA.metodo_pago)
       "customer": {
