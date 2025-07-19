@@ -81,7 +81,7 @@ export default function EdicionVendedor({ onClose }) {
             setNoVendedor(true);
             setError(null);
           } else {
-            setError("Error al cargar datos del vendedor.");
+            setError('Error al cargar datos del vendedor.');
           }
         }
       } catch (e) {
@@ -93,8 +93,8 @@ export default function EdicionVendedor({ onClose }) {
           setNoVendedor(true);
           setError(null);
         } else {
-          console.error("Error al cargar datos del vendedor:", e);
-          setError("Error al cargar datos del vendedor.");
+          console.error('Error al cargar datos del vendedor:', e);
+          setError('Error al cargar datos del vendedor.');
         }
       } finally {
         setLoading(false);
@@ -144,7 +144,7 @@ export default function EdicionVendedor({ onClose }) {
     e.preventDefault();
 
     if (!validateForm()) {
-      setError("Por favor, corrija los errores en el formulario.");
+      setError('Por favor, corrija los errores en el formulario.');
       return;
     }
 

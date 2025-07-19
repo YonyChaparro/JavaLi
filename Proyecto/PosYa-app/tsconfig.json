@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "target": "ES2022",
+        "jsx": "react-jsx",
+        "sourceMap": true,
+        // Opciones que se han modificado para ser menos estrictas:
+        "strictNullChecks": false, // Cambiado de true a false
+        "strictFunctionTypes": false, // Cambiado de true a false
+        // "strict": false, // Puedes descomentar esta línea para desactivar todas las verificaciones estrictas a la vez
+        "noImplicitAny": false, // Añadido: Permite el tipo 'any' implícito
+        "noImplicitThis": false, // Añadido: Permite 'this' implícito con tipo 'any'
+        "noUnusedLocals": false, // Añadido: No reporta errores por variables locales no usadas
+        "noUnusedParameters": false, // Añadido: No reporta errores por parámetros de función no usados
+        "noEmitOnError": true
+    },
+    "exclude": [
+        "node_modules",
+        "**/node_modules/*"
+    ],
+    "include": [
+        "**/*"
+    ]
+}

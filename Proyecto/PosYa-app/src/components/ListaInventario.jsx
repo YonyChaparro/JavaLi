@@ -22,13 +22,13 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
     fetch('http://localhost:3000/api/productos')
       .then(res => res.json())
       .then(data => setProductosDisponibles(data))
-      .catch(err => console.error("Error fetching products:", err));
+      .catch(err => console.error('Error fetching products:', err));
 
     // Fetch movement types for filter dropdown
     fetch('http://localhost:3000/api/tipos-movimiento')
       .then(res => res.json())
       .then(data => setTiposMovimientoDisponibles(data))
-      .catch(err => console.error("Error fetching movement types:", err));
+      .catch(err => console.error('Error fetching movement types:', err));
 
   }, []);
 
@@ -235,7 +235,7 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
                     {movimiento.producto}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${movimiento.tipo_flujo === 'Entrada' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                  }`}>
                     {movimiento.tipo_flujo === 'Entrada' ? '+' : '-'}{movimiento.cantidad}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

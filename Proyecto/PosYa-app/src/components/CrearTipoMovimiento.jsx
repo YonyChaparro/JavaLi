@@ -102,7 +102,7 @@ export default function CrearTipoMovimiento({ onClose, onSuccess }) {
     e.preventDefault();
 
     if (!validateForm()) {
-      setError("Por favor, corrija los errores en el formulario.");
+      setError('Por favor, corrija los errores en el formulario.');
       return;
     }
 

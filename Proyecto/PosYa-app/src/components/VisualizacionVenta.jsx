@@ -123,7 +123,6 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     await new Promise(res => setTimeout(res, 300));
     const docHTML = iframe.contentDocument.body;
 
-
     // Rellenar datos del mockup con los nombres de propiedad correctos del backend
     const razonSocial = docHTML.querySelector('.razon-social');
     if (razonSocial) razonSocial.textContent = venta.vendedor || 'Vendedor';
@@ -173,7 +172,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
       const totales = docHTML.querySelectorAll('.totales .linea');
       if (totales[0]) totales[0].innerHTML = `Subtotal: <strong>$${subtotal.toFixed(2)}</strong>`;
       if (totales[1]) totales[1].innerHTML = `IVA: <strong>$${totalIVA.toFixed(2)}</strong>`;
-      if (totales[2]) totales[2].innerHTML = `Otros: <strong>$0.00</strong>`;
+      if (totales[2]) totales[2].innerHTML = 'Otros: <strong>$0.00</strong>';
       const totalNode = docHTML.querySelector('.totales .total');
       if (totalNode) totalNode.textContent = `TOTAL: $${total.toFixed(2)}`;
     }
@@ -397,7 +396,6 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
           </div>
         </div>
       )}
-
 
       {/* Botones de acción */}
       <div className="flex justify-end space-x-4 mt-6">

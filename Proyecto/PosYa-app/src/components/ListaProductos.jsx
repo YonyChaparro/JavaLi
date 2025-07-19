@@ -26,7 +26,7 @@ function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 
   );
 }
 
-const ListaProductos = ({ 
+const ListaProductos = ({
   onAddProduct,
   onEditProduct,
   onDeleteProduct,
@@ -109,7 +109,7 @@ const ListaProductos = ({
     );
   });
 
-  const productosOrdenados = [...productosFiltrados].sort((a, b) => 
+  const productosOrdenados = [...productosFiltrados].sort((a, b) =>
     (a?.nombre || '').localeCompare(b?.nombre || '')
   );
 
@@ -118,18 +118,16 @@ const ListaProductos = ({
   const productosPaginaActual = productosOrdenados.slice(indicePrimerProducto, indiceUltimoProducto);
   const totalPaginas = Math.ceil(productosOrdenados.length / productosPorPagina);
 
-  const formatearPrecio = (valor) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP'
-    }).format(valor);
-  };
+  const formatearPrecio = (valor) => new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP'
+  }).format(valor);
 
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="text-red-600 mb-4">Error: {error}</div>
-        <button 
+        <button
           onClick={onBack}
           className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
         >
@@ -140,17 +138,17 @@ const ListaProductos = ({
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 relative transition-all duration-300 ${productoSeleccionado ? 'pb-0 mb-0 min-h-[700px]' : ''}`}> 
+    <div className={`bg-white rounded-lg shadow-md p-6 relative transition-all duration-300 ${productoSeleccionado ? 'pb-0 mb-0 min-h-[700px]' : ''}`}>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800 mr-40">Productos Registrados</h2>
         <div className="flex space-x-2">
-          <button 
+          <button
             onClick={onBack}
             className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
           >
             <FiChevronLeft className="inline mr-1" /> Volver
           </button>
-          <button 
+          <button
             onClick={onAddProduct}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center"
           >
@@ -200,8 +198,8 @@ const ListaProductos = ({
               </tr>
             ) : (
               productosPaginaActual.map(producto => (
-                <tr 
-                  key={producto.codigo} 
+                <tr
+                  key={producto.codigo}
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => setProductoSeleccionado(producto)}
                 >

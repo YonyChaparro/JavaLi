@@ -25,7 +25,7 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
   useEffect(() => {
     if (cliente) {
       // Asegura que tipoCliente solo sea 'natural' o 'juridica'
-      let tipo = (cliente.tipo === 'juridica') ? 'juridica' : 'natural';
+      const tipo = (cliente.tipo === 'juridica') ? 'juridica' : 'natural';
       setTipoCliente(tipo);
       setFormData({
         primerNombre: cliente.primerNombre || '',
@@ -80,7 +80,7 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
   };
 
   const validate = () => {
-    let newErrors = {};
+    const newErrors = {};
     const commonFields = ['tipoDocumento', 'numeroDocumento', 'direccion', 'ciudad', 'numero_telefonico', 'correo_electronico'];
 
     if (tipoCliente === 'natural') {
@@ -119,7 +119,7 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
       // Asegura que el campo tipo sea exactamente 'natural' o 'juridica'
       // Siempre enviar tipo correcto
       // El tipo debe ser exactamente 'natural' o 'juridica'
-      let tipo = (tipoCliente === 'juridica') ? 'juridica' : 'natural';
+      const tipo = (tipoCliente === 'juridica') ? 'juridica' : 'natural';
       let dataToSend;
       if (tipo === 'natural') {
         // Solo los campos de persona natural
@@ -384,7 +384,7 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
             className={`px-4 py-2 text-white rounded-md transition flex items-center shadow ${isSubmitting // Added shadow
               ? 'bg-blue-400 cursor-not-allowed'
               : 'bg-green-600 hover:bg-green-700'
-              }`}
+            }`}
             disabled={isSubmitting}
           >
             {isSubmitting ? (

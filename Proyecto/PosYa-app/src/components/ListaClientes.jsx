@@ -28,11 +28,11 @@ function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 
   );
 }
 
-const ListaClientes = ({ 
-  onAddClient, 
-  onEditClient, 
+const ListaClientes = ({
+  onAddClient,
+  onEditClient,
   onDeleteClient,
-  onBack 
+  onBack
 }) => {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ const ListaClientes = ({
       })
       .then(data => setClientes(data))
       .catch(error => {
-        console.error("Error fetching clients:", error);
+        console.error('Error fetching clients:', error);
         setError('No se pudieron cargar los clientes. Intente de nuevo.');
         setClientes([]);
       })
@@ -87,7 +87,7 @@ const ListaClientes = ({
       setClientes(prev => prev.filter(c => c.id !== itemToDelete.id));
       onDeleteClient && onDeleteClient(itemToDelete.id);
     } catch (e) {
-      console.error("Error deleting client:", e);
+      console.error('Error deleting client:', e);
       showNotification(e.message, 'error');
     } finally {
       setShowConfirmDelete(false);
@@ -110,8 +110,8 @@ const ListaClientes = ({
   const clientesPaginaActual = clientesFiltrados.slice(indicePrimerCliente, indiceUltimoCliente);
   const totalPaginas = Math.ceil(clientesFiltrados.length / clientesPorPagina);
 
-  const formatearNombre = (cliente) => cliente.tipo === 'natural' 
-    ? `${cliente.primerNombre || ''} ${cliente.primerApellido || ''}`.trim() || '-' 
+  const formatearNombre = (cliente) => cliente.tipo === 'natural'
+    ? `${cliente.primerNombre || ''} ${cliente.primerApellido || ''}`.trim() || '-'
     : cliente.razonSocial || '-';
 
   const formatearDocumento = (cliente) => `${cliente.tipoDocumento || ''}: ${cliente.numeroDocumento || ''}`.trim();
@@ -129,13 +129,13 @@ const ListaClientes = ({
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Clientes Registrados</h2>
             <div className="flex space-x-2">
-              <button 
+              <button
                 onClick={onBack}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition shadow"
               >
                 <FiChevronLeft className="inline mr-1" /> Volver
               </button>
-              <button 
+              <button
                 onClick={() => setMostrarFormulario(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center shadow"
               >
@@ -187,8 +187,8 @@ const ListaClientes = ({
                   </tr>
                 ) : clientesPaginaActual.length > 0 ? (
                   clientesPaginaActual.map((cliente, idx) => (
-                    <tr 
-                      key={cliente.id || cliente.numeroDocumento || idx} 
+                    <tr
+                      key={cliente.id || cliente.numeroDocumento || idx}
                       className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
                         setClienteDetalle(cliente);

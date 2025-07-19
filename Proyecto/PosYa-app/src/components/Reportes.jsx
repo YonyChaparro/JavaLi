@@ -114,7 +114,7 @@ export default function Reportes({ onClose, onBack }) {
     }
     const doc = new jsPDF();
 
-    let filtersDesc = [];
+    const filtersDesc = [];
     if (filtros.producto && producto) {
       filtersDesc.push(`Producto: ${producto}`);
     }
@@ -129,7 +129,7 @@ export default function Reportes({ onClose, onBack }) {
       });
     }
 
-    let startY = filtersDesc.length > 0 ? 32 + (filtersDesc.length - 1) * 8 : 10;
+    const startY = filtersDesc.length > 0 ? 32 + (filtersDesc.length - 1) * 8 : 10;
     if (!tableRef.current) {
       setError('No hay datos para exportar');
       return;
@@ -138,12 +138,10 @@ export default function Reportes({ onClose, onBack }) {
     doc.save(`reporte_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  const formatearPrecio = (valor) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP'
-    }).format(valor);
-  };
+  const formatearPrecio = (valor) => new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP'
+  }).format(valor);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 relative">
@@ -264,7 +262,7 @@ export default function Reportes({ onClose, onBack }) {
               onClick={handleGenerar}
               disabled={loading}
               className={`px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center ${loading ? 'opacity-75 cursor-not-allowed' : ''
-                }`}
+              }`}
             >
               {loading ? (
                 <>
@@ -354,7 +352,7 @@ export default function Reportes({ onClose, onBack }) {
                         )}
                         {filtros.utilidades && (
                           <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${item.utilidades >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
+                          }`}>
                             {formatearPrecio(item.utilidades)}
                           </td>
                         )}

@@ -79,8 +79,8 @@ const FormularioVenta = ({ onClose }) => {
   const seleccionarProducto = (producto) => {
     const updatedProducts = productos.map((item) => {
       if (item.id === productoEditando) {
-        return { 
-          ...item, 
+        return {
+          ...item,
           producto: producto.nombre,
           precio: producto.precio,
           monto: producto.precio * item.cantidad
@@ -177,7 +177,7 @@ const FormularioVenta = ({ onClose }) => {
                     className="w-full p-2 border border-gray-300 rounded-md"
                     value={item.producto || ''}
                     onChange={(e) => {
-                      const updatedProducts = productos.map(p => 
+                      const updatedProducts = productos.map(p =>
                         p.id === item.id ? { ...p, producto: e.target.value } : p
                       );
                       setProductos(updatedProducts);
@@ -233,7 +233,7 @@ const FormularioVenta = ({ onClose }) => {
             ))}
           </tbody>
         </table>
-        
+
         <button
           onClick={agregarProducto}
           className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"

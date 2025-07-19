@@ -74,48 +74,48 @@ const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave })
     setSubmitMessage({ type: '', text: '' });
 
     if (!validateForm()) {
-        return;
+      return;
     }
 
     setIsSubmitting(true);
 
     try {
-        const productoData = {
-            codigo: formData.codigo || `PROD-${Date.now()}`,
-            nombre: formData.nombre,
-            costoUnitario: parseFloat(formData.costoUnitario),
-            precioUnitario: parseFloat(formData.precioUnitario),
-            descripcion: formData.descripcion,
-            exentoIVA: formData.exentoIVA,
-            tipoIVA: formData.tipoIVA
-        };
+      const productoData = {
+        codigo: formData.codigo || `PROD-${Date.now()}`,
+        nombre: formData.nombre,
+        costoUnitario: parseFloat(formData.costoUnitario),
+        precioUnitario: parseFloat(formData.precioUnitario),
+        descripcion: formData.descripcion,
+        exentoIVA: formData.exentoIVA,
+        tipoIVA: formData.tipoIVA
+      };
 
-        // Verifica que todos los campos requeridos estén presentes
-        if (!productoData.nombre || !productoData.costoUnitario || !productoData.precioUnitario) {
-            throw new Error('Faltan campos obligatorios');
-        }
+      // Verifica que todos los campos requeridos estén presentes
+      if (!productoData.nombre || !productoData.costoUnitario || !productoData.precioUnitario) {
+        throw new Error('Faltan campos obligatorios');
+      }
 
-        const response = await fetch(`/api/productos${productoEditado ? '/' + productoData.codigo : ''}`, {
-            method: productoEditado ? 'PUT' : 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(productoData)
-        });
+      const response = await fetch(`/api/productos${productoEditado ? '/' + productoData.codigo : ''}`, {
+        method: productoEditado ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productoData)
+      });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Error al guardar el producto');
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al guardar el producto');
+      }
 
-        const data = await response.json();
-        setSubmitMessage({ type: 'success', text: productoEditado ? 'Producto actualizado exitosamente' : 'Producto creado exitosamente' });
-        onSave(data);
+      const data = await response.json();
+      setSubmitMessage({ type: 'success', text: productoEditado ? 'Producto actualizado exitosamente' : 'Producto creado exitosamente' });
+      onSave(data);
     } catch (error) {
-        console.error('Error:', error);
-        setSubmitMessage({ type: 'error', text: error.message || 'Error desconocido al guardar el producto' });
+      console.error('Error:', error);
+      setSubmitMessage({ type: 'error', text: error.message || 'Error desconocido al guardar el producto' });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -124,8 +124,8 @@ const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave })
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800">{productoEditado ? 'Editar Producto' : 'Nuevo Producto'}</h2>
         {onClose && (
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-500 hover:text-gray-700 transition"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,8 +137,8 @@ const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave })
 
       {submitMessage.text && (
         <div className={`mb-4 p-3 rounded ${
-          submitMessage.type === 'success' 
-            ? 'bg-green-100 text-green-800' 
+          submitMessage.type === 'success'
+            ? 'bg-green-100 text-green-800'
             : 'bg-red-100 text-red-800'
         }`}>
           {submitMessage.text}
@@ -278,7 +278,7 @@ const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave })
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <button 
+          <button
             type="button"
             onClick={onBack}
             className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
@@ -289,8 +289,8 @@ const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave })
             type="submit"
             disabled={isSubmitting}
             className={`px-4 py-2 text-white rounded transition flex items-center ${
-              isSubmitting 
-                ? 'bg-blue-400 cursor-not-allowed' 
+              isSubmitting
+                ? 'bg-blue-400 cursor-not-allowed'
                 : 'bg-green-600 hover:bg-green-700'
             }`}
           >

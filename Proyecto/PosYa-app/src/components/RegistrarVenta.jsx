@@ -55,7 +55,7 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
           showNotification('Error al cargar información del vendedor.', 'error');
         }
       } catch (err) {
-        console.error("Error cargando datos:", err);
+        console.error('Error cargando datos:', err);
         showNotification('Error general al cargar datos.', 'error');
       }
     };
@@ -133,18 +133,16 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
   };
 
   // Calcular totales
-  const calcularTotales = () => {
-    return productos.reduce((acc, prod) => {
-      const precio = parseFloat(prod.precio_unitario) || 0;
-      const iva = parseFloat(prod.IVA_unitario) || 0;
-      const cantidad = parseFloat(prod.cantidad) || 0;
+  const calcularTotales = () => productos.reduce((acc, prod) => {
+    const precio = parseFloat(prod.precio_unitario) || 0;
+    const iva = parseFloat(prod.IVA_unitario) || 0;
+    const cantidad = parseFloat(prod.cantidad) || 0;
 
-      return {
-        subtotal: acc.subtotal + (precio * cantidad),
-        total: acc.total + ((precio + iva) * cantidad)
-      };
-    }, { subtotal: 0, total: 0 });
-  };
+    return {
+      subtotal: acc.subtotal + (precio * cantidad),
+      total: acc.total + ((precio + iva) * cantidad)
+    };
+  }, { subtotal: 0, total: 0 });
 
   const { subtotal, total } = calcularTotales();
 
@@ -426,7 +424,7 @@ const RegistrarVenta = ({ onClose, onBack, onVentaRegistrada }) => {
             type="submit"
             disabled={guardando}
             className={`flex items-center px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md shadow transition ${guardando ? 'opacity-75 cursor-not-allowed' : ''
-              }`} // Unificado con ListaClientes
+            }`} // Unificado con ListaClientes
           >
             {guardando ? (
               <>

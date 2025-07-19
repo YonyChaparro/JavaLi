@@ -21,7 +21,7 @@ function TipoMovimientoRow({ row, onEdit, onDelete }) {
         <button
           onClick={e => { e.stopPropagation(); onDelete(row); }}
           className={`text-red-600 ${isDefault ? 'opacity-50 cursor-not-allowed' : 'hover:text-red-900'}`}
-          title={isDefault ? "Este tipo de movimiento no se puede eliminar" : "Eliminar tipo de movimiento"}
+          title={isDefault ? 'Este tipo de movimiento no se puede eliminar' : 'Eliminar tipo de movimiento'}
           disabled={isDefault}
         >
           <FiTrash2 />
@@ -131,8 +131,8 @@ function CrearTipoMovimientoModal({ onClose, onSuccess }) {
             <button
               type="submit"
               className={`px-4 py-2 text-white rounded transition flex items-center ${
-                isSubmitting 
-                  ? 'bg-blue-400 cursor-not-allowed' 
+                isSubmitting
+                  ? 'bg-blue-400 cursor-not-allowed'
                   : 'bg-green-600 hover:bg-green-700'
               }`}
               disabled={isSubmitting}
@@ -265,13 +265,13 @@ export default function TipoMovimiento({ onBack }) {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800">Tipos de Movimiento</h2>
         <div className="flex space-x-2">
-          <button 
+          <button
             onClick={onBack}
             className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
           >
             <FiChevronLeft className="inline mr-1" /> Volver
           </button>
-          <button 
+          <button
             onClick={() => {
               setCrearKey(Date.now());
               setShowCrear(true);
