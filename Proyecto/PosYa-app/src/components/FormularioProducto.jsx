@@ -146,7 +146,6 @@ const FormularioProducto = ({ productoEditado = null, onClose, onBack, onSave })
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Nombre del Producto e Impuestos en una sola fila */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">

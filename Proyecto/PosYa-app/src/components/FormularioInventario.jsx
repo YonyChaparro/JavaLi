@@ -10,7 +10,6 @@ export default function Inventario({ onClose, onBack }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  // No se usan errores por fila en el nuevo diseño
 
   useEffect(() => {
     async function cargarDatos() {
@@ -44,7 +43,6 @@ export default function Inventario({ onClose, onBack }) {
     setFilas(filas => filas.filter((_, i) => i !== idx));
   };
 
-  // No se usa validateFilas, la validación es global y simple
 
   const handleGuardar = async () => {
     setLoading(true);

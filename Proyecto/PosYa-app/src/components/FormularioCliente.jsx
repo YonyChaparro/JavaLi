@@ -53,7 +53,6 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error for the field being changed
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -64,7 +63,6 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
   };
 
   const handleTipoClienteChange = (e) => {
-    // Usa el valor exacto del botón
     const nuevoTipo = e.target.value;
     if (nuevoTipo !== 'natural' && nuevoTipo !== 'juridica') return;
     setTipoCliente(nuevoTipo);
@@ -72,7 +70,6 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
       if (nuevoTipo === 'natural') {
         return { ...prev, razonSocial: '', tipoDocumento: '' };
       } else {
-        // Forzar tipoDocumento a NIT
         return { ...prev, primerNombre: '', segundoNombre: '', primerApellido: '', segundoApellido: '', tipoDocumento: 'NIT' };
       }
     });
@@ -94,7 +91,6 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
       if (!formData[field].trim()) newErrors[field] = 'Este campo es obligatorio.';
     });
 
-    // Basic correo_electronico validation
     if (formData.correo_electronico && !/\S+@\S+\.\S+/.test(formData.correo_electronico)) {
       newErrors.correo_electronico = 'El formato del correo_electronico es inválido.';
     }
@@ -105,7 +101,7 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitMessage({ type: '', text: '' }); // Clear previous messages
+    setSubmitMessage({ type: '', text: '' }); 
 
     if (!validate()) {
       setSubmitMessage({ type: 'error', text: 'Por favor, corrija los errores en el formulario.' });
@@ -114,15 +110,10 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
 
     setIsSubmitting(true);
     try {
-      // Prepare data to send
-      // Siempre enviar todos los campos, los no usados como string vacío
-      // Asegura que el campo tipo sea exactamente 'natural' o 'juridica'
-      // Siempre enviar tipo correcto
       // El tipo debe ser exactamente 'natural' o 'juridica'
       const tipo = (tipoCliente === 'juridica') ? 'juridica' : 'natural';
       let dataToSend;
       if (tipo === 'natural') {
-        // Solo los campos de persona natural
         const { primerNombre, segundoNombre, primerApellido, segundoApellido, tipoDocumento, numeroDocumento, direccion, ciudad, numero_telefonico, correo_electronico } = formData;
         dataToSend = {
           tipo,
@@ -138,7 +129,6 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
           correo_electronico
         };
       } else {
-        // Solo los campos de persona juridica
         const { razonSocial, tipoDocumento, numeroDocumento, direccion, ciudad, numero_telefonico, correo_electronico } = formData;
         dataToSend = {
           tipo,
@@ -151,13 +141,12 @@ const FormularioCliente = ({ onClose, onBack, onSave, cliente }) => {
           correo_electronico
         };
       }
-      // Debug: muestra el payload antes de enviar
       console.log('Payload enviado:', dataToSend);
       await onSave(dataToSend);
       setSubmitMessage({ type: 'success', text: 'Cliente guardado exitosamente!' });
       setTimeout(() => {
         setSubmitMessage({ type: '', text: '' });
-        onClose(); // Close the modal after successful save
+        onClose(); 
       }, 2000);
     } catch (err) {
       setSubmitMessage({ type: 'error', text: `Error al guardar cliente: ${err.message}` });

@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-
-// Modelo/Schema del tipo de movimiento
 const tipoMovimientoSchema = {
   nombre: {
     label: 'Nombre',
@@ -44,7 +42,7 @@ export default function CrearTipoMovimiento({ onClose, onSuccess }) {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
 
-    // Real-time validation
+    // validación en tiempo real
     const field = tipoMovimientoSchema[name];
     if (field) {
       let isValid = true;

@@ -2,38 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-
 /* Estilos personalizados para barras de desplazamiento */
 
-/* Para navegadores basados en Webkit (Chrome, Safari, Edge) */
-/* Aquí se aplica a todos los elementos con scroll, puedes ser más específico si es necesario */
 ::-webkit-scrollbar {
-    width: 10px; /* Ancho de la barra de desplazamiento */
-    height: 10px; /* Alto de la barra de desplazamiento horizontal */
+    width: 10px; 
+    height: 10px; 
   }
-  
-  /* El "track" o fondo de la barra de desplazamiento */
+
   ::-webkit-scrollbar-track {
-    background: transparent; /* Fondo transparente para que el redondeo se vea mejor */
-    border-radius: 5px; /* Redondea las esquinas del track */
+    background: transparent; 
+    border-radius: 5px; 
   }
   
-  /* El "thumb" o el deslizador de la barra de desplazamiento */
+  
   ::-webkit-scrollbar-thumb {
-    background: #888; /* Color del deslizador (gris) */
-    border-radius: 5px; /* Redondea las esquinas del deslizador */
-    border: 2px solid transparent; /* Pequeño borde transparente para separar el thumb del track */
-    background-clip: padding-box; /* Asegura que el color de fondo no se extienda al borde */
+    background: #888; 
+    border-radius: 5px; 
+    border: 2px solid transparent; 
+    background-clip: padding-box; 
   }
   
-  /* Estilo del deslizador al pasar el ratón por encima */
+  
   ::-webkit-scrollbar-thumb:hover {
-    background: #555; /* Oscurecer al pasar el ratón */
+    background: #555; 
   }
   
-  /* Para Firefox (propiedades estándar, aunque menos granular que Webkit) */
-  /* Puedes ajustar el color y el ancho, pero el redondeo es menos controlable en Firefox con estas propiedades */
   * {
-    scrollbar-width: thin; /* 'auto' o 'none' */
-    scrollbar-color: #888 transparent; /* thumb color track color */
+    scrollbar-width: thin;
+    scrollbar-color: #888 transparent;
   }

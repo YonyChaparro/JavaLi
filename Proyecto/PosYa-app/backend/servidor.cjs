@@ -582,8 +582,7 @@ app.get('/api/venta', async (req, res) => {
     }
 });
 
-
-// --- NUEVOS ENDPOINTS PARA LA API DE FACTUS ---
+//API Factus
 
 // Endpoint para obtener rangos de numeración (opcional, si lo necesitas para otras funcionalidades)
 app.get('/api/factus/rangos/facturas', async (req, res) => {
@@ -621,7 +620,6 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
     }
 
     // Obtener datos del cliente (natural o jurídico).
-    // Esta lógica podría requerir ajustes según cómo tengas las tablas CLIENTE, CLIENTE_NATURAL, CLIENTE_JURIDICO
     let clienteDetalles;
     // Intenta buscar en CLIENTE_NATURAL
     clienteDetalles = await new Promise((resolve, reject) => {
@@ -641,7 +639,7 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
         });
     }
 
-    // Si aún no se encuentra, busca en la tabla CLIENTE principal (podría ser para datos básicos si no es natural/jurídico)
+    // Si aún no se encuentra, busca en la tabla CLIENTE principal 
     if (!clienteDetalles) {
         clienteDetalles = await new Promise((resolve, reject) => {
             db.get(`SELECT * FROM CLIENTE WHERE identificacion = ?`, [venta.identificacion_cliente], (err, row) => {
@@ -660,65 +658,45 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
       });
     });
 
-        // 3. Mapear datos de la DB al formato de Factus
-    // ESTA ES LA PARTE MÁS CRÍTICA Y DONDE NECESITARÁS TUS MAPEOS DE IDs DE FACTUS
-    // Los valores como 3, 31, 980, 70, 1, 21, 1 son EJEMPLOS.
-    // Debes reemplazarlos con los IDs numéricos de Factus que correspondan a tus datos.
-    // Puedes obtener estos IDs de los catálogos de Factus API o de tu propio mapeo.
-
+    // 3. Mapear datos de la DB al formato de Factus
     const facturaParaFactus = {
-      "document": "01", // Tipo de documento (Factura de Venta) - Fijo según Factus
-      "reference_code": codigoVenta, // Código de referencia de su venta local (desde VENTA.codigo)
-      "observation": "", // Campo de observación, puede ser mapeado desde VENTA.observacion si existe
-      "payment_method_code": "10", // Código de método de pago (ej. 10: Efectivo) - Mapear desde su DB (ej. VENTA.metodo_pago)
+      "document": "01", // Tipo de documento (Factura de Venta) 
+      "reference_code": codigoVenta, // Código de referencia de su venta local 
+      "observation": "", 
+      "payment_method_code": "10", // Código de método de pago (10: Efectivo) 
       "customer": {
-        "identification": venta.identificacion_cliente, // Identificación del cliente (NIT/CC) (desde VENTA.identificacion_cliente)
-        // El 'dv' (dígito de verificación) a menudo se asocia con NIT.
-        // Asume que clienteJuridico.dv podría existir si su DB lo almacena.
-        "dv": 3, // Se usa clienteJuridico si está disponible
-        "company": venta.razon_social_cliente || "", // Razón social para clientes jurídicos (desde VENTA.razon_social_cliente)
-        "trade_name": venta.razon_social_cliente || "", // Nombre comercial para clientes jurídicos (desde VENTA.razon_social_cliente)
-        // Concatena nombre y apellido para clientes naturales (desde VENTA.nombre_cliente, VENTA.apellido_cliente)
+        "identification": venta.identificacion_cliente, 
+        "dv": 3, 
+        "company": venta.razon_social_cliente || "", 
+        "trade_name": venta.razon_social_cliente || "", 
         "names": venta.nombre_cliente ? `${venta.nombre_cliente} ${venta.apellido_cliente || ''}`.trim() : "",
-        // Dirección del cliente (desde VENTA.direccion_cliente)
         "address": venta.direccion_cliente || '',
-        // Correo electrónico del cliente (desde VENTA.correo_electronico_cliente)
         "email": venta.correo_electronico_cliente || '',
-        // Número de teléfono del cliente (desde VENTA.numero_telefonico_cliente)
         "phone": venta.numero_telefonico_cliente || '',
-        // *** MAPEO CRÍTICO DE IDs DE FACTUS ***
         // ID de la organización legal (1: Jurídica, 2: Natural)
-        // La lógica del endpoint /api/venta ya determina si es natural o jurídico.
-        "legal_organization_id": venta.razon_social_cliente ? 1 : 2, // Si tiene razón social, es jurídica
-        // ID del tipo de tributo (ej. 21: No aplica, 1: IVA) - Mapear desde su DB (ej. VENTA.responsabilidad_fiscal_cliente)
-        "tribute_id": 21, // <<-- REEMPLAZAR con el ID real de Factus (ej. 21 para 'No Responsable de IVA')
-        // ID del tipo de documento de identificación (ej. 3: CC, 31: NIT) - Mapear desde su DB
-        // La VENTA.tipo_identificacion_cliente ya tiene el tipo de documento.
+        "legal_organization_id": venta.razon_social_cliente ? 1 : 2, 
+        "tribute_id": 21,
         "identification_document_id": (() => {
     switch (venta.tipo_identificacion_cliente) {
         case 'CC':
-            return 3; // Cédula de Ciudadanía (Correcto)
+            return 3; 
         case 'NIT':
-            return 3; // NIT (Ajustado de 31 a 6 según Factus API)
+            return 3; 
         case 'CE':
-            return 3; // Cédula de Extranjería (Ajustado de 4 a 5 según Factus API)
+            return 3; 
         case 'TI':
-            return 3; // Tarjeta de Identidad (Agregado como ejemplo)
+            return 3; 
         case 'PA':
-            return 3; // Pasaporte (Ajustado de 5 a 7 según Factus API)
+            return 3; 
         case 'TE':
-            return 3; // Tarjeta de Extranjería (Agregado como ejemplo)
+            return 3; 
         case 'PEP':
-            return 3; // Permiso Especial de Permanencia (PEP) (Agregado como ejemplo)
-        // Añadir más casos aquí si tu base de datos tiene otros tipos
-        // que deban mapearse a los IDs de Factus (por ejemplo, 'RC' para Registro Civil -> 1)
+            return 3; 
         default:
-            return 3; // Valor por defecto. Considera si este es el valor más seguro
-                      // o si prefieres lanzar un error para tipos no reconocidos.
+            return 3;
     }
 })(),
-        // ID del municipio (ej. 980: San Gil) - Mapear desde su DB (ej. VENTA.ciudad_cliente)
-        "municipality_id": 980 // <<-- REEMPLAZAR con el ID real de Factus
+        "municipality_id": 169 
       },
       "items": await Promise.all(detallesProductos.map(async item => {
         // Obtener la tasa de IVA del producto desde la tabla PRODUCTO
@@ -730,21 +708,16 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
         });
 
         return {
-          "code_reference": codigoVenta, // Código de referencia del producto (desde DETALLE_PRODUCTO_VENDIDO.codigo_producto)
-          "name": item.nombre_producto, // Nombre del producto (desde DETALLE_PRODUCTO_VENDIDO.nombre_producto)
-          "quantity": item.cantidad, // Cantidad vendida (desde DETALLE_PRODUCTO_VENDIDO.cantidad)
-          "discount_rate": 0, // Tasa de descuento del ítem - Mapear desde su DB si aplica (ej. DETALLE_PRODUCTO_VENDIDO.discount_rate)
-          "price": item.precio_unitario, // Precio unitario del producto (desde DETALLE_PRODUCTO_VENDIDO.precio_unitario)
-          "tax_rate": producto?.tasa_IVA || 0, // Tasa de IVA del producto - Obtenida de la tabla PRODUCTO
-          // ID de unidad de medida (ej. 70 para 'unidad') - Mapear desde su DB (ej. PRODUCTO.unidad_medida)
-          "unit_measure_id": 70, // <<-- REEMPLAZAR con el ID real de Factus
-          // ID de código estándar (ej. 1) - Mapear desde su DB (ej. PRODUCTO.codigo_estandar)
-          "standard_code_id": 1, // <<-- REEMPLAZAR con el ID real de Factus
-          // Indicador de exclusión de impuestos (0: No excluido, 1: Excluido) - Mapear desde su DB (ej. PRODUCTO.is_excluded)
-          "is_excluded": 0, // 0 es el valor que funcionó en la depuración anterior
-          // ID de tributo (ej. 1 para IVA) - Mapear desde su DB (ej. PRODUCTO.tributo_id)
-          "tribute_id": 1, // <<-- REEMPLAZAR con el ID real de Factus
-          // Array de retenciones - Mapear desde su DB si existen retenciones por producto (ej. DETALLE_PRODUCTO_VENDIDO.retenciones)
+          "code_reference": codigoVenta, 
+          "name": item.nombre_producto, 
+          "quantity": item.cantidad, 
+          "discount_rate": 0, 
+          "price": item.precio_unitario, 
+          "tax_rate": producto?.tasa_IVA || 0, 
+          "unit_measure_id": 70, 
+          "standard_code_id": 1, 
+          "is_excluded": 0, 
+          "tribute_id": 1, 
           "withholding_taxes": []
         };
       }))
@@ -755,8 +728,7 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
     res.json(resultadoFactus);
 
   } catch (error) {
-    console.error('❌ Error al generar factura desde DB:', error.message);
-    // Si el error viene de Factus, podría tener un 'data' con más detalles
+    console.error('Error al generar factura desde DB:', error.message);
     if (error.response?.data) {
         console.error('Detalles del error de Factus:', error.response.data);
         return res.status(error.response.status || 500).json({ 
@@ -799,7 +771,7 @@ app.get('/api/factus/factura/:numeroFactura/xml', async (req, res) => {
 
     const xmlBuffer = Buffer.from(xmlBase64, 'base64');
     let finalFileName = fileName;
-    if (!finalFileName.toLowerCase().endsWith('.xml')) { // Asegurar extensión .xml
+    if (!finalFileName.toLowerCase().endsWith('.xml')) { 
       finalFileName += '.xml';
     }
 

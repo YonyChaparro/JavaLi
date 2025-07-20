@@ -53,7 +53,7 @@ const ListaProductos = ({
         const data = await response.json();
         setProductos(data.map(p => ({
           ...p,
-          id: p.codigo // Usamos el código como ID único
+          id: p.codigo 
         })));
       } catch (err) {
         console.error('Error:', err);
@@ -101,8 +101,6 @@ const ListaProductos = ({
 
   const productosFiltrados = productos.filter(producto => {
     const termino = busqueda.toLowerCase();
-    // Se añade optional chaining (?.) y un valor por defecto ('') para evitar errores
-    // si el producto o sus propiedades (nombre, codigo) son nulos o indefinidos.
     return (
       (producto?.nombre || '').toLowerCase().includes(termino) ||
       (producto?.codigo || '').toLowerCase().includes(termino)

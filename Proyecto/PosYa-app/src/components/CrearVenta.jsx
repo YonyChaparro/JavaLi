@@ -1,18 +1,9 @@
 import { useState, useEffect } from 'react';
 
 const FormularioVenta = ({ onClose }) => {
-  // Datos de ejemplo (deberías reemplazarlos con datos reales de tu API)
-  const [clientes, setClientes] = useState([
-    { id: 1, nombre: 'Cliente 1' },
-    { id: 2, nombre: 'Cliente 2' },
-    { id: 3, nombre: 'Cliente 3' },
-  ]);
+  const [clientes, setClientes] = useState([]);
 
-  const [productosDisponibles, setProductosDisponibles] = useState([
-    { id: 1, nombre: 'Producto 1', precio: 100 },
-    { id: 2, nombre: 'Producto 2', precio: 200 },
-    { id: 3, nombre: 'Producto 3', precio: 300 },
-  ]);
+  const [productosDisponibles, setProductosDisponibles] = useState([]);
 
   const [productos, setProductos] = useState([
     { id: 1, producto: null, precio: 0, cantidad: 1, monto: 0 },

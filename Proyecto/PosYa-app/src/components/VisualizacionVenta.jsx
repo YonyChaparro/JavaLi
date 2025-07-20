@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { FiX, FiChevronLeft, FiTrash2, FiDownload, FiSend, FiLink } from 'react-icons/fi'; // Añadimos FiSend y FiLink
+import { FiX, FiChevronLeft, FiTrash2, FiDownload, FiSend, FiLink } from 'react-icons/fi'; 
 
-// Modal de confirmación reutilizable (idéntico a HistorialVentas)
+// Modal de confirmación reutilizable 
 function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 'Confirmar', cancelText = 'Cancelar' }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
@@ -26,8 +26,6 @@ function ConfirmationModal({ title, message, onConfirm, onCancel, confirmText = 
     </div>
   );
 }
-
-// Recibe onVentaEliminada opcional para notificar al padre (HistorialVentas)
 const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
   const [venta, setVenta] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -36,12 +34,9 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
   const [eliminando, setEliminando] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [mensaje, setMensaje] = useState(null);
-
-  // --- Nuevos estados para la Factura Electrónica ---
   const [facturaElectronicaInfo, setFacturaElectronicaInfo] = useState(null);
   const [loadingFacturaElectronica, setLoadingFacturaElectronica] = useState(false);
   const [errorFacturaElectronica, setErrorFacturaElectronica] = useState(null);
-  // --------------------------------------------------
 
   async function eliminarVenta() {
     if (!venta || !venta.numero) return;
@@ -51,7 +46,6 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
       const resp = await fetch(`http://localhost:3000/api/venta/${encodeURIComponent(venta.numero)}`, { method: 'DELETE' });
       if (!resp.ok) throw new Error('No se pudo eliminar la venta');
       setMensaje('Venta eliminada correctamente.');
-      // Notificar al padre si existe el callback (como en HistorialVentas)
       if (onVentaEliminada) onVentaEliminada(venta.numero);
       setTimeout(() => {
         setEliminando(false);
@@ -101,8 +95,6 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
       });
     }
     const { jsPDF } = window.jspdf;
-
-    // Crear iframe oculto
     const iframe = document.createElement('iframe');
     Object.assign(iframe.style, {
       position: 'fixed',
@@ -176,8 +168,6 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
       const totalNode = docHTML.querySelector('.totales .total');
       if (totalNode) totalNode.textContent = `TOTAL: $${total.toFixed(2)}`;
     }
-
-    // Cargar html2canvas si es necesario
     if (!window.html2canvas) {
       await new Promise(resolve => {
         const script = document.createElement('script');
@@ -193,7 +183,6 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     const rect = docHTML.querySelector('.factura-container').getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
-    // Usar html2canvas para capturar solo la factura
     const canvas = await window.html2canvas(docHTML.querySelector('.factura-container'), {
       backgroundColor: '#fff',
       scale: 2,
@@ -202,8 +191,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
       height: height
     });
     const imgData = canvas.toDataURL('image/png');
-    // Crear PDF con tamaño ajustado a la imagen
-    const pdfWidth = width * 0.75; // 1px = 0.75pt
+    const pdfWidth = width * 0.75; 
     const pdfHeight = height * 0.75;
     const doc = new jsPDF({ orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait', unit: 'pt', format: [pdfWidth, pdfHeight] });
     doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
@@ -212,7 +200,6 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
     setTimeout(() => iframe.remove(), 500);
   }
 
-  // --- Nueva función para generar la Factura Electrónica ---
   async function generarFacturaElectronica() {
     if (!venta || !venta.numero) {
       setErrorFacturaElectronica('No se pudo obtener el código de venta para la factura electrónica.');
@@ -432,7 +419,7 @@ const VisualizacionVenta = ({ codigo, onClose, onVentaEliminada }) => {
           Eliminar
         </button>
       </div>
-      {/* Modal de confirmación igual a HistorialVentas */}
+      {/* Modal de confirmación*/}
       {showConfirmDelete && venta && (
         <ConfirmationModal
           title="Confirmar Eliminación"

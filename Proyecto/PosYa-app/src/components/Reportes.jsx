@@ -41,18 +41,18 @@ export default function Reportes({ onClose, onBack }) {
   const handleFiltroChange = (e) => {
     const { name, checked } = e.target;
     setFiltros(f => ({ ...f, [name]: checked }));
-    setMostrarReporte(false); // Reset report visibility when filters change
+    setMostrarReporte(false); 
   };
 
   const handleProductoChange = (e) => {
     setProducto(e.target.value);
-    setMostrarReporte(false); // Reset report visibility when product changes
+    setMostrarReporte(false); 
   };
 
   const handlePeriodoChange = (e) => {
     if (e.target.name === 'fechaInicio') setFechaInicio(e.target.value);
     else setFechaFin(e.target.value);
-    setMostrarReporte(false); // Reset report visibility when period changes
+    setMostrarReporte(false); 
   };
 
   const handleGenerar = async () => {
@@ -155,11 +155,11 @@ export default function Reportes({ onClose, onBack }) {
         </button>
       </div>
 
-      <div className="space-y-8"> {/* Increased spacing between major sections */}
+      <div className="space-y-8"> 
         {/* Panel de Filtros */}
-        <fieldset className="p-4 bg-gray-50 rounded-lg border border-gray-200"> {/* Added fieldset and border */}
-          <legend className="text-lg font-semibold text-gray-800 px-2">Configuración del Reporte</legend> {/* Added legend */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4"> {/* Added mt-4 for spacing after legend */}
+        <fieldset className="p-4 bg-gray-50 rounded-lg border border-gray-200"> 
+          <legend className="text-lg font-semibold text-gray-800 px-2">Configuración del Reporte</legend> 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4"> 
             {/* Columna 1: Datos a mostrar */}
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">Datos a Incluir</h3>
@@ -257,7 +257,7 @@ export default function Reportes({ onClose, onBack }) {
 
         {/* Botones de Acción */}
         <div className="flex justify-center space-x-3 mt-6">
-          {!mostrarReporte && ( // Show "Generar Reporte" only if no report is displayed
+          {!mostrarReporte && ( 
             <button
               onClick={handleGenerar}
               disabled={loading}
@@ -278,7 +278,7 @@ export default function Reportes({ onClose, onBack }) {
             </button>
           )}
 
-          {mostrarReporte && ( // Show "Generar Nuevo Reporte" only if a report is displayed
+          {mostrarReporte && ( 
             <button
               onClick={handleNewReport}
               className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition flex items-center"

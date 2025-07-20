@@ -39,7 +39,6 @@ const HistorialVentas = ({ onClose }) => {
   const [paginaActual, setPaginaActual] = useState(1);
   const ventasPorPagina = 10;
   const [notification, setNotification] = useState({ message: '', type: '' });
-  // Filtros adicionales
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [numeroFiltro, setNumeroFiltro] = useState('');

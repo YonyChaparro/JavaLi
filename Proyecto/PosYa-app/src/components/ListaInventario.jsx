@@ -18,13 +18,11 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
   const [tiposMovimientoDisponibles, setTiposMovimientoDisponibles] = useState([]);
 
   useEffect(() => {
-    // Fetch products for filter dropdown
     fetch('http://localhost:3000/api/productos')
       .then(res => res.json())
       .then(data => setProductosDisponibles(data))
       .catch(err => console.error('Error fetching products:', err));
 
-    // Fetch movement types for filter dropdown
     fetch('http://localhost:3000/api/tipos-movimiento')
       .then(res => res.json())
       .then(data => setTiposMovimientoDisponibles(data))
@@ -62,7 +60,7 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
     };
 
     fetchMovimientos();
-  }, [filters]); // Re-fetch when filters change
+  }, [filters]); 
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -80,7 +78,6 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
   };
 
   const refreshMovimientos = () => {
-    // Trigger useEffect by updating filters with current values to force re-fetch
     setFilters(prev => ({ ...prev }));
   };
 
@@ -105,7 +102,6 @@ const ListaInventario = ({ onAddInventario, onBack }) => {
         </div>
       </div>
 
-      {/* Filter Section */}
       <div className="mb-4 p-4 bg-gray-50 rounded-md shadow-sm"> {/* Updated to rounded-md and added shadow-sm */}
         <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
           <FiFilter className="mr-2" />

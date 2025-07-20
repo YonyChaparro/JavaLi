@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-// Modelo/Schema del vendedor
+// Modelo del vendedor
 const vendedorSchema = {
   NIT: {
     label: 'NIT',
@@ -127,7 +127,7 @@ export default function EdicionVendedor({ onClose }) {
       const field = vendedorSchema[key];
       const value = form[key];
 
-      if (field.required && (!value || value.trim() === '')) { // Ensure trim for string fields
+      if (field.required && (!value || value.trim() === '')) { 
         errors[key] = 'Este campo es obligatorio';
         isValid = false;
       } else if (field.validation && !field.validation(value)) {
@@ -155,9 +155,6 @@ export default function EdicionVendedor({ onClose }) {
     try {
       let method;
       let url;
-
-      // Determine if it's an update (PUT) or creation (POST) based on presence of ven_NIT
-      // Assuming ven_NIT is the primary identifier and once set, it implies an existing record
       if (form.ven_NIT) {
         method = 'PUT';
         url = `http://localhost:3000/api/vendedor/${form.ven_NIT}`;
@@ -194,13 +191,12 @@ export default function EdicionVendedor({ onClose }) {
     <div className="bg-white rounded-lg shadow-xl p-6 w-full h-full relative">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800">Datos del Vendedor</h2>
-        {/* Removed redundant close button from header as "Cancelar" button serves this purpose */}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6"> {/* Added space-y for consistent vertical spacing */}
+      <form onSubmit={handleSubmit} className="space-y-6"> 
         <fieldset className="p-4 bg-gray-50 rounded-lg border border-gray-200">
           <legend className="text-lg font-semibold text-gray-800 px-2">Información del Vendedor</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"> {/* Added mt-4 for spacing after legend */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {Object.entries(vendedorSchema).map(([key, field]) => (
               <div key={key} className="space-y-1">
                 <label htmlFor={key} className="block text-sm font-medium text-gray-700">
@@ -243,7 +239,6 @@ export default function EdicionVendedor({ onClose }) {
           </div>
         </fieldset>
 
-        {/* Mensajes de estado que también ocupan ambas columnas */}
         {success && (
           <div className="md:col-span-2 bg-green-50 border border-green-500 text-green-800 p-4 rounded-md" role="alert"> {/* Consistent styling */}
             <p>Datos guardados correctamente</p>
@@ -260,7 +255,6 @@ export default function EdicionVendedor({ onClose }) {
           </div>
         )}
 
-        {/* Contenedor de botones que ocupa ambas columnas en pantallas medianas y grandes */}
         <div className="md:col-span-2 flex justify-end space-x-3 mt-6">
           <button
             type="button"
