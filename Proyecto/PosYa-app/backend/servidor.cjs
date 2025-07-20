@@ -695,15 +695,28 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
         // ID del tipo de documento de identificación (ej. 3: CC, 31: NIT) - Mapear desde su DB
         // La VENTA.tipo_identificacion_cliente ya tiene el tipo de documento.
         "identification_document_id": (() => {
-            switch (venta.tipo_identificacion_cliente) {
-                case 'CC': return 3; // Cédula de Ciudadanía
-                case 'NIT': return 31; // NIT
-                case 'CE': return 4; // Cédula de Extranjería (ejemplo, verificar ID real en Factus)
-                case 'PA': return 5; // Pasaporte (ejemplo, verificar ID real en Factus)
-                // Añadir más casos según los tipos de documento en su DB y sus IDs en Factus
-                default: return 3; // Valor por defecto, ajustar según su necesidad
-            }
-        })(),
+    switch (venta.tipo_identificacion_cliente) {
+        case 'CC':
+            return 3; // Cédula de Ciudadanía (Correcto)
+        case 'NIT':
+            return 6; // NIT (Ajustado de 31 a 6 según Factus API)
+        case 'CE':
+            return 5; // Cédula de Extranjería (Ajustado de 4 a 5 según Factus API)
+        case 'TI':
+            return 2; // Tarjeta de Identidad (Agregado como ejemplo)
+        case 'PA':
+            return 7; // Pasaporte (Ajustado de 5 a 7 según Factus API)
+        case 'TE':
+            return 4; // Tarjeta de Extranjería (Agregado como ejemplo)
+        case 'PEP':
+            return 9; // Permiso Especial de Permanencia (PEP) (Agregado como ejemplo)
+        // Añadir más casos aquí si tu base de datos tiene otros tipos
+        // que deban mapearse a los IDs de Factus (por ejemplo, 'RC' para Registro Civil -> 1)
+        default:
+            return 3; // Valor por defecto. Considera si este es el valor más seguro
+                      // o si prefieres lanzar un error para tipos no reconocidos.
+    }
+})(),
         // ID del municipio (ej. 980: San Gil) - Mapear desde su DB (ej. VENTA.ciudad_cliente)
         "municipality_id": 980 // <<-- REEMPLAZAR con el ID real de Factus
       },
