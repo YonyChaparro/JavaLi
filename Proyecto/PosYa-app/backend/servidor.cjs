@@ -699,17 +699,17 @@ app.post('/api/factus/generar-factura-db', async (req, res) => {
         case 'CC':
             return 3; // Cédula de Ciudadanía (Correcto)
         case 'NIT':
-            return 6; // NIT (Ajustado de 31 a 6 según Factus API)
+            return 3; // NIT (Ajustado de 31 a 6 según Factus API)
         case 'CE':
-            return 5; // Cédula de Extranjería (Ajustado de 4 a 5 según Factus API)
+            return 3; // Cédula de Extranjería (Ajustado de 4 a 5 según Factus API)
         case 'TI':
-            return 2; // Tarjeta de Identidad (Agregado como ejemplo)
+            return 3; // Tarjeta de Identidad (Agregado como ejemplo)
         case 'PA':
-            return 7; // Pasaporte (Ajustado de 5 a 7 según Factus API)
+            return 3; // Pasaporte (Ajustado de 5 a 7 según Factus API)
         case 'TE':
-            return 4; // Tarjeta de Extranjería (Agregado como ejemplo)
+            return 3; // Tarjeta de Extranjería (Agregado como ejemplo)
         case 'PEP':
-            return 9; // Permiso Especial de Permanencia (PEP) (Agregado como ejemplo)
+            return 3; // Permiso Especial de Permanencia (PEP) (Agregado como ejemplo)
         // Añadir más casos aquí si tu base de datos tiene otros tipos
         // que deban mapearse a los IDs de Factus (por ejemplo, 'RC' para Registro Civil -> 1)
         default:
